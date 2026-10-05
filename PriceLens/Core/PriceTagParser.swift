@@ -516,7 +516,7 @@ enum PriceTagParser {
         _ text: String
     ) -> Bool {
         let pattern =
-            #"(?i)(?<![\p{L}\p{N}])(?:"
+            #"(?i)(?<![\p{L}\p{N}])(?:"#
             + RetailLexicon.unitRegexAlternation
             + #")(?![\p{L}\p{N}])"#
 
