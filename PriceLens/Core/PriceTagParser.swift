@@ -114,22 +114,27 @@ enum PriceTagParser {
         in text: String,
         currency: String?
     ) -> Decimal? {
+        let groupedDecimalPattern = #"(?<!\d)(\d{1,3}(?:[ \u{00A0}\u{202F}\.,]\d{3})+[\.,]\d{2})(?!\d)"#
         let decimalPattern = #"(?<!\d)(\d{1,4}[\.,]\d{2})(?!\d)"#
 
-        if let match = firstMatch(pattern: decimalPattern, in: text),
-           let raw = capturedString(match, group: 1, text: text),
-           let value = decimal(raw) {
-            return value
+        for pattern in [groupedDecimalPattern, decimalPattern] {
+            if let match = firstMatch(pattern: pattern, in: text),
+               let raw = capturedString(match, group: 1, text: text),
+               let value = decimal(raw) {
+                return value
+            }
         }
 
         // Common European zero-cents notation: 4,- / 4.- / 4.–
+        let groupedZeroCentsPattern = #"(?<!\d)(\d{1,3}(?:[ \u{00A0}\u{202F}\.,]\d{3})+)\s*[\.,]\s*[-–—](?!\d)"#
         let zeroCentsPattern = #"(?<!\d)(\d{1,4})\s*[\.,]\s*[-–—](?!\d)"#
-        if let match = firstMatch(pattern: zeroCentsPattern, in: text),
-           let raw = capturedString(match, group: 1, text: text) {
-            return Decimal(
-                string: raw,
-                locale: Locale(identifier: "en_US_POSIX")
-            )
+
+        for pattern in [groupedZeroCentsPattern, zeroCentsPattern] {
+            if let match = firstMatch(pattern: pattern, in: text),
+               let raw = capturedString(match, group: 1, text: text),
+               let value = integerWithGrouping(raw) {
+                return value
+            }
         }
 
         // Integer-only prices are accepted only when the currency is directly
@@ -139,6 +144,18 @@ enum PriceTagParser {
         }
 
         let currencyPattern = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)"#
+        let groupedNumber = #"(\d{1,3}(?:[ \u{00A0}\u{202F}\.,]\d{3})+)"#
+        let groupedPrefixed = #"(?i)"# + currencyPattern + #"\s*"# + groupedNumber
+        let groupedSuffixed = #"(?i)(?<!\d)"# + groupedNumber + #"\s*"# + currencyPattern
+
+        for pattern in [groupedPrefixed, groupedSuffixed] {
+            if let match = firstMatch(pattern: pattern, in: text),
+               let raw = capturedString(match, group: 1, text: text),
+               let value = integerWithGrouping(raw) {
+                return value
+            }
+        }
+
         let prefixed = #"(?i)"# + currencyPattern + #"\s*(\d{1,4})(?![\d\.,])"#
         let suffixed = #"(?i)(?<![\d\.,])(\d{1,4})\s*"# + currencyPattern
 
@@ -419,8 +436,27 @@ enum PriceTagParser {
         return decimal(string)
     }
 
+    private static func integerWithGrouping(
+        _ raw: String
+    ) -> Decimal? {
+        let normalized = raw
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
+            .replacingOccurrences(of: ".", with: "")
+            .replacingOccurrences(of: ",", with: "")
+
+        return Decimal(
+            string: normalized,
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+    }
+
     private static func decimal(_ raw: String) -> Decimal? {
-        var value = raw.replacingOccurrences(of: " ", with: "")
+        var value = raw
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
 
         if value.contains(","), value.contains(".") {
             let comma = value.lastIndex(of: ",")
