@@ -120,6 +120,16 @@ final class ScannerModel: ObservableObject {
         }
     }
 
+    func appBecameInactive() {
+        resetRecognition()
+
+        if cameraState == .ready {
+            // Removing ScannerView stops the active DataScanner session.
+            // A fresh session is created when the app becomes active again.
+            cameraState = .preparing
+        }
+    }
+
     func scannerBecameUnavailable(_ message: String) {
         resetRecognition()
         cameraState = .failed(message)

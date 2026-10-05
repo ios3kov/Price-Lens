@@ -26,6 +26,7 @@
 - Ambiguous recognition must resolve to a retry/guidance state, not a guessed winner.
 - Camera permission denial and unsupported hardware need explicit states.
 - A denied camera permission must offer a direct Settings recovery path and re-check permission when the app becomes active again.
+- Leaving the app must clear any published comparison and tear down the active scanner session so returning cannot show a stale result.
 - The parsing/comparison core must be testable without the camera.
 
 ## Supported notation in the first parser

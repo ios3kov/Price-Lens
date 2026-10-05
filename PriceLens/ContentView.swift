@@ -29,13 +29,16 @@ struct ContentView: View {
             await scannerModel.prepareCamera()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active,
-                  scannerModel.cameraState != .ready else {
-                return
-            }
+            if newPhase == .active {
+                guard scannerModel.cameraState != .ready else {
+                    return
+                }
 
-            Task {
-                await scannerModel.prepareCamera()
+                Task {
+                    await scannerModel.prepareCamera()
+                }
+            } else {
+                scannerModel.appBecameInactive()
             }
         }
     }
