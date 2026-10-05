@@ -53,74 +53,70 @@ final class ScannerModel: ObservableObject {
     }
 
     func receive(_ items: [ScannedText]) {
-        var candidates = TagClusterer.clusters(from: items)
+        let candidates = TagClusterer.clusters(from: items)
             .compactMap(PriceTagParser.parse(cluster:))
 
-        candidates = CandidateDeduplicator.deduplicated(candidates)
-
-        if candidates.count > 2 {
+        switch CandidatePairSelector.select(from: candidates) {
+        case .tooMany:
             dropoutGate.cancel()
             visibleCandidates = []
             stabilizer.reset()
             missingUpdateCount = 0
             scanState = .tooManyTags
             return
-        }
 
-        guard candidates.count >= 2 else {
+        case .none:
             missingUpdateCount += 1
 
             if case .result = scanState {
-                scheduleResultDropout(
-                    fallbackCandidates: candidates
-                )
+                scheduleResultDropout(fallbackCandidates: [])
                 return
             }
 
             dropoutGate.cancel()
             stabilizer.reset()
 
-            if candidates.count == 1 {
-                visibleCandidates = candidates
-                scanState = .oneTagFound
-            } else if missingUpdateCount >= 3 {
+            if missingUpdateCount >= 3 {
                 visibleCandidates = []
                 scanState = .searching
             }
             return
-        }
 
-        dropoutGate.cancel()
-        missingUpdateCount = 0
+        case .one(let candidate):
+            missingUpdateCount += 1
 
-        // Exactly two valid candidates are required. If there are more, the
-        // scanner asks the user to tighten the frame instead of guessing.
-        let ordered = CandidateOrdering.ordered(candidates)
+            if case .result = scanState {
+                scheduleResultDropout(
+                    fallbackCandidates: [candidate]
+                )
+                return
+            }
 
-        guard ordered.count == 2 else {
-            visibleCandidates = []
-            scanState = .searching
-            return
-        }
-
-        visibleCandidates = ordered
-
-        let left = ordered[0]
-        let right = ordered[1]
-
-        switch ComparisonEngine.compare(left: left, right: right) {
-        case .failure(let failure):
+            dropoutGate.cancel()
             stabilizer.reset()
-            scanState = .incompatible(failure.message)
+            visibleCandidates = [candidate]
+            scanState = .oneTagFound
+            return
 
-        case .success(let comparison):
-            let signature = left.semanticSignature + "|" + right.semanticSignature
-            let isStable = stabilizer.observe(
-                signature: signature,
-                at: ProcessInfo.processInfo.systemUptime
-            )
+        case .pair(let left, let right):
+            dropoutGate.cancel()
+            missingUpdateCount = 0
+            visibleCandidates = [left, right]
 
-            scanState = isStable ? .result(comparison) : .comparing
+            switch ComparisonEngine.compare(left: left, right: right) {
+            case .failure(let failure):
+                stabilizer.reset()
+                scanState = .incompatible(failure.message)
+
+            case .success(let comparison):
+                let signature = left.semanticSignature + "|" + right.semanticSignature
+                let isStable = stabilizer.observe(
+                    signature: signature,
+                    at: ProcessInfo.processInfo.systemUptime
+                )
+
+                scanState = isStable ? .result(comparison) : .comparing
+            }
         }
     }
 

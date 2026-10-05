@@ -751,6 +751,60 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(ordered.last?.price, Decimal(string: "7.49"))
     }
 
+    func testCandidatePairSelectorRefusesMoreThanTwoCandidates() {
+        let candidates = [
+            productCandidate(
+                price: "1.99",
+                quantity: "0.25",
+                bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+            ),
+            productCandidate(
+                price: "2.99",
+                quantity: "0.50",
+                bounds: CGRect(x: 110, y: 10, width: 80, height: 60)
+            ),
+            productCandidate(
+                price: "4.99",
+                quantity: "1.00",
+                bounds: CGRect(x: 210, y: 10, width: 80, height: 60)
+            )
+        ]
+
+        XCTAssertEqual(
+            CandidatePairSelector.select(from: candidates),
+            .tooMany
+        )
+    }
+
+    func testCandidatePairSelectorCollapsesDuplicateBeforeCounting() {
+        let first = productCandidate(
+            price: "1.99",
+            quantity: "0.25",
+            bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+        )
+        let duplicate = productCandidate(
+            price: "1.99",
+            quantity: "0.25",
+            bounds: CGRect(x: 14, y: 14, width: 80, height: 60),
+            confidence: 0.8
+        )
+        let second = productCandidate(
+            price: "2.99",
+            quantity: "0.50",
+            bounds: CGRect(x: 210, y: 10, width: 80, height: 60)
+        )
+
+        switch CandidatePairSelector.select(
+            from: [first, duplicate, second]
+        ) {
+        case .pair(let a, let b):
+            XCTAssertEqual(a.price, Decimal(string: "1.99"))
+            XCTAssertEqual(b.price, Decimal(string: "2.99"))
+        default:
+            XCTFail("Expected exactly one deduplicated pair")
+        }
+    }
+
     func testEqualUnitPricesProduceNoWinner() throws {
         let first = try XCTUnwrap(
             PriceTagParser.parse(

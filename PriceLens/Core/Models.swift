@@ -70,6 +70,34 @@ struct ProductCandidate: Identifiable, Equatable {
 
 
 
+
+enum CandidatePairSelection: Equatable {
+    case none
+    case one(ProductCandidate)
+    case pair(ProductCandidate, ProductCandidate)
+    case tooMany
+}
+
+enum CandidatePairSelector {
+    static func select(
+        from candidates: [ProductCandidate]
+    ) -> CandidatePairSelection {
+        let deduplicated = CandidateDeduplicator.deduplicated(candidates)
+
+        switch deduplicated.count {
+        case 0:
+            return .none
+        case 1:
+            return .one(deduplicated[0])
+        case 2:
+            let ordered = CandidateOrdering.ordered(deduplicated)
+            return .pair(ordered[0], ordered[1])
+        default:
+            return .tooMany
+        }
+    }
+}
+
 enum CandidateDeduplicator {
     static func deduplicated(
         _ candidates: [ProductCandidate],
