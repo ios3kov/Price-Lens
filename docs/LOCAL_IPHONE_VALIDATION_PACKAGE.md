@@ -2,13 +2,13 @@
 
 ## Exact candidate
 
-- Source commit to build: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf`
+- Source commit to build: `114f31f616c1c7cd1c59aee264c916a2867d0b38`
 - Bundle ID: `com.os3kov.PriceLens`
 - Version/build: `0.1.0 (1)`
 - Channel: local Xcode signed install
 - Standard: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 
-This candidate replaces the bounded RUB parser with the generalized retail grammar after physical evidence showed another valid Russian form (`56 + 99 р/шт.`). Do not build from a different production-source commit and call it the same candidate.
+This candidate adds disconnected-OCR recovery and transient OCR-line diagnostics after the generalized parser still reached `Text found` on a physical Russian shelf label. Do not build from a different production-source commit and call it the same candidate.
 
 ## Local preparation
 
@@ -16,7 +16,7 @@ From the existing local repository or a clean clone:
 
 ```bash
 git fetch origin
-git checkout d76107bb1389a215eddba03d2bbdbd8efea9c9bf
+git checkout 114f31f616c1c7cd1c59aee264c916a2867d0b38
 git status --short
 git rev-parse HEAD
 xcodebuild -version

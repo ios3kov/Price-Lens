@@ -14,7 +14,8 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 - Last physically launched candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
 - Last physically launched multi-item candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — OCR/parser FAIL on Russian shelf label
 - Last physically launched OCR candidate: `7a25dbceb00926a868c5686934c3059e0269e932` — OCR text visible, parser still FAIL on `56 + 99 р/шт. / 315г`
-- Current retail-grammar validation candidate: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf`
+- Last physically launched retail-grammar candidate: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf` — OCR visible, candidate assembly FAIL
+- Current physical OCR retest candidate: `114f31f616c1c7cd1c59aee264c916a2867d0b38`
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -46,21 +47,21 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 
 ## Internal verification
 
-For current retail-grammar candidate `d76107bb`:
+For current physical OCR retest candidate `114f31f6`:
 
-- GitHub Actions run: `37359173440`
+- GitHub Actions run: `37361384799`
 - Xcode 16.4
 - Swift 6.1.2
 - iOS Simulator build: PASS
 - unsigned iPhone device-target build: PASS
 - built bundle identity: PASS — `com.os3kov.PriceLens 0.1.0 (1)`
 - bundled privacy manifest / Required Reason API `35F9.1`: PASS
-- core regression suite: PASS — 89 executed, 0 failures
-- generalized currency/number/unit corpus: PASS
-- recursive 3–4 label clustering regression: PASS
-- ambiguity gate regression: PASS
-- `KM` and `BAM` canonical-equivalence while preserving shelf display token: PASS
-- physical generalized-parser retest: NOT_RUN
+- core regression suite: PASS — 92 executed, 0 failures
+- generalized retail grammar corpus: PASS
+- disconnected OCR fragments inside one-label ROI fallback: PASS
+- separate currency suffix fragment `р/шт.`: PASS
+- two complete neighboring labels are not collapsed by fallback: PASS
+- physical same-label retest: NOT_RUN
 
 Historical Evidence for earlier candidates remains unchanged.
 
@@ -98,9 +99,9 @@ The next candidate adds RUB parsing, dynamic preferred/ru/en language hints and 
 
 ## Remaining blocker
 
-The generalized retail grammar is **not yet validated on a physical iPhone**.
+The disconnected-OCR recovery path is **not yet validated on a physical iPhone**.
 
-Next required step: build and install exact candidate `d76107bb`; first retest both previously failing Russian shelf labels, then run the controlled multi-item corpus and M01–M15.
+Next required step: build and install exact candidate `114f31f6`; retest the same `56 + 99 р/шт. / 315г` label first. If parsing still fails, the `Text found` card now exposes the exact VisionKit OCR strings in the screenshot.
 
 Blocking runtime failures include any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result, inaccessible critical recovery/result state, unexpected data flow, or unrecoverable camera state.
 
@@ -111,7 +112,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Requirement / obligation | Implementation block | Observable acceptance | Check / phase | Current status / Evidence |
 | --- | --- | --- | --- | --- |
 | Camera-only primary workflow; no manual entry | VisionKit scanner + SwiftUI camera UI | User can compare without typing | pre-handoff: source/build review; user-validation: live camera | Implementation PASS; runtime NOT RUN |
-| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION PASS; 89-test CI PASS; device NOT_RUN |
+| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION PASS; 92-test CI PASS; device NOT_RUN |
 | Price + quantity stay associated with the same tag | geometry clustering + recursive split guards | no cross-tag price/quantity pairing | pre-handoff tests + user-validation fixtures | Automated PASS; live camera NOT RUN |
 | Unit normalization is correct | Decimal parser / ComparisonEngine | g↔kg, ml/cl↔L, count and multipacks yield correct unit price | pre-handoff: unit tests | PASS |
 | Ambiguous/unit-price text does not create a false winner | parser rejection rules | `/kg`, `per 100 g/ml`, unsupported ambiguity do not become package price | pre-handoff: regression tests | PASS |
@@ -119,7 +120,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Candidate preview corresponds to centered label | DataScanner bounds + one-label ROI | preview outline/value belongs to the label the user is about to add | user-validation: physical iPhone | NOT RUN |
 | Live OCR is useful on real shelf labels | DataScanner `.accurate` + one-label ROI + stabilization | stable preview is correct before Add; previously added items remain intact | user-validation: physical iPhone | NOT RUN |
 | Performance target | stabilization / on-device processing | useful result <= 1.5 s after stable readable framing | user-validation: physical iPhone timing | NOT RUN |
-| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on d76107bb |
+| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on 114f31f6 |
 | Basic accessibility | SwiftUI semantics + Reduce Motion + result accessibility value | critical result/recovery state is understandable without color-only cues | pre-handoff compile/review + user-validation device checks | Implementation PASS; device checks NOT_RUN |
 | Artifact identity for validation | exact Git commit + bundle ID/version/build + local signed Xcode install | installed test build is traceable to exact candidate | pre-handoff/user-validation boundary | unsigned identity PASS; signed installed identity NOT_RUN |
 | Merge / public release | explicit user authorization required | no merge/publication without command | permission boundary | NOT AUTHORIZED / NOT PERFORMED |
@@ -249,3 +250,18 @@ Current automated corpus includes:
 - Unicode multipacks;
 - old/promotional price competition;
 - near-tied ambiguity rejection.
+
+
+## Disconnected OCR recovery
+
+Physical evidence on `d76107bb` showed `Text found` without a candidate even though the generalized grammar included the visible retail format.
+
+The new extraction layer now:
+
+1. parses normal geometry clusters first;
+2. if no complete candidate exists, attempts the full single-label ROI as one aggregate label;
+3. preserves the parser ambiguity gate, so aggregate fallback cannot bypass safe-refusal logic;
+4. allows split whole/cents prices to inherit currency from a separate nearby OCR fragment;
+5. exposes up to eight transient OCR lines in `Text found` for physical diagnosis.
+
+No OCR text is persisted or transmitted.

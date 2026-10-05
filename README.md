@@ -12,16 +12,17 @@ Scan one price label, review what Price Lens recognized, tap Add, then scan the 
 
 The initial native iOS MVP is implemented on `feat/initial-mvp`.
 
-Current AS 4.1 retail-grammar validation candidate: `d76107bb`
+Current AS 4.1 physical OCR retest candidate: `114f31f6`
 
 - iOS Simulator build: PASS
 - Unsigned iPhone device-target build: PASS
-- Core tests: 89 / 89 PASS
+- Core tests: 92 / 92 PASS
 - Device bundle identity + privacy manifest CI check: PASS
 - Physical candidates `8450963d` and `a2d9d9e0`: launched, workflow UX FAIL
 - Previous multi-item candidate `d33616b9`: physical Russian ₽ OCR FAIL
 - `7a25dbce` physical retest: OCR text seen, parser still FAIL on `56 + 99 р/шт. / 315г`
-- Generalized retail-grammar physical retest: NOT RUN
+- Generalized grammar `d76107bb`: physical OCR still reached `Text found`
+- Disconnected-OCR fallback physical retest: NOT RUN
 - Public release: not authorized / not performed
 
 Controlled fixtures are in `validation/multi-item-fixtures.html` and `validation/russian-ruble-fixture.html`. Parser contract: `docs/RETAIL_GRAMMAR.md`.

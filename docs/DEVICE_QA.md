@@ -1,6 +1,6 @@
 # Device QA — Price Lens Validation Candidate
 
-Current retail-grammar retest candidate: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf`
+Current physical OCR retest candidate: `114f31f616c1c7cd1c59aee264c916a2867d0b38`
 Previous multi-item physical candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — Russian ₽ OCR FAIL
 Historical physical candidates:
 - `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
@@ -146,3 +146,21 @@ R06 triggered the RetailLexicon/grammar refactor. The photo also contained an ol
 | G03 | Old/smaller competing price | Current prominent price wins only when geometry is decisive | NOT_RUN | |
 | G04 | Ambiguous similar prices | Safe refusal / Text found; no guessed Add | NOT_RUN | |
 | G05 | Multi-item after Russian capture | Add 3+ compatible products and rank correctly | NOT_RUN | |
+
+
+## Historical physical result — candidate d76107bb
+
+| ID | Scenario | Status | Evidence / issue |
+| --- | --- | --- | --- |
+| G02 | `56 + 99 р/шт. / 315г` | FAIL | UI remained at `Text found`; VisionKit saw text but no ProductCandidate was assembled. |
+
+This result triggered full-ROI fallback and raw OCR-line diagnostics.
+
+## Retest for candidate 114f31f6
+
+| ID | Scenario | Expected | Status | Evidence / issue |
+| --- | --- | --- | --- | --- |
+| X01 | Same `56 + 99 р/шт. / 315г` label | `Label ready`, 56.99 ₽, 0.315 kg | NOT_RUN | |
+| X02 | If parse still fails | `Text found` shows actual OCR strings for screenshot capture | NOT_RUN | |
+| X03 | Original `229 + 99₽ / 200Г` label | `Label ready`, 229.99 ₽, 0.2 kg | NOT_RUN | |
+| X04 | Two complete labels partly visible | no unsafe aggregate cross-pair | NOT_RUN | |
