@@ -57,6 +57,15 @@ final class ScannerModel: ObservableObject {
 
         candidates = deduplicated(candidates)
 
+        if candidates.count > 2 {
+            visibleCandidates = []
+            pendingSignature = nil
+            stableUpdateCount = 0
+            missingUpdateCount = 0
+            scanState = .tooManyTags
+            return
+        }
+
         guard candidates.count >= 2 else {
             missingUpdateCount += 1
 
@@ -80,14 +89,9 @@ final class ScannerModel: ObservableObject {
 
         missingUpdateCount = 0
 
-        // Prefer the two strongest candidates, then give them a stable
-        // screen order using the pair's dominant spatial axis.
-        let strongest = Array(
-            candidates
-                .sorted { $0.confidence > $1.confidence }
-                .prefix(2)
-        )
-        let ordered = CandidateOrdering.ordered(strongest)
+        // Exactly two valid candidates are required. If there are more, the
+        // scanner asks the user to tighten the frame instead of guessing.
+        let ordered = CandidateOrdering.ordered(candidates)
 
         guard ordered.count == 2 else {
             visibleCandidates = []

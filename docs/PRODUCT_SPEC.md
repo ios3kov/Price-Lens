@@ -18,6 +18,7 @@
 
 - The live scanner must restrict recognition to a visible central comparison zone so surrounding shelf labels are not silently selected.
 - OCR results inside that zone must be grouped into two price-tag candidates.
+- If more than two valid price tags are present, the app must refuse to choose a pair automatically and ask the user to tighten the frame.
 - Price and quantity must be associated with the correct tag.
 - Quantities must be normalized before comparison.
 - The system must refuse comparison when dimensions differ.
@@ -93,6 +94,10 @@ Not enough usable OCR content is visible.
 ### One tag found
 
 A valid price + quantity pair is available for one candidate.
+
+### Too many tags
+
+More than two valid candidates are inside the comparison zone. No pair is selected; the user is asked to move closer.
 
 ### Comparing
 

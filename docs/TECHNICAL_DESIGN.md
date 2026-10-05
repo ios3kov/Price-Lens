@@ -68,7 +68,7 @@ Because live scanning is the product’s core feature, the first build treats th
    - confidence
 4. TagClusterer groups nearby items.
 5. PriceTagParser tries to create a ProductCandidate from each cluster.
-6. The best two valid candidates are selected.
+6. Exactly two valid candidates are required. More than two yields a guidance state instead of an implicit pair choice.
 7. ComparisonEngine checks dimension compatibility and calculates the result.
 8. ScannerModel stabilizes equivalent results before publishing them to the UI.
 

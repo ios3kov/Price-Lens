@@ -122,6 +122,12 @@ struct ContentView: View {
                     detail: "Move slightly so both tags are inside the frame"
                 )
 
+            case .tooManyTags:
+                HintCard(
+                    title: "Too many price tags",
+                    detail: "Move closer so only two tags are inside the frame"
+                )
+
             case .comparing:
                 HintCard(
                     title: "Comparing…",

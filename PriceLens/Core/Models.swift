@@ -159,6 +159,7 @@ struct PriceComparison: Equatable {
 enum ScanState: Equatable {
     case searching
     case oneTagFound
+    case tooManyTags
     case comparing
     case result(PriceComparison)
     case incompatible(String)
