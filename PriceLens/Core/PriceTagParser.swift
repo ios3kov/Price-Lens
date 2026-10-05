@@ -187,6 +187,25 @@ enum PriceTagParser {
             return nil
         }
 
+        // If currency came from a nearby standalone OCR fragment, a bare
+        // integer such as "4" is a valid package price.
+        let bareIntegerPattern = #"^\s*(\d{1,4})\s*$"#
+        if let match = firstMatch(
+            pattern: bareIntegerPattern,
+            in: text
+        ),
+           let raw = capturedString(
+            match,
+            group: 1,
+            text: text
+           ),
+           let value = Decimal(
+            string: raw,
+            locale: Locale(identifier: "en_US_POSIX")
+           ) {
+            return value
+        }
+
         let currencyPattern = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)"#
         let groupedNumber = #"(\d{1,3}(?:[\s\.,]\d{3})+)"#
         let groupedPrefixed = #"(?i)"# + currencyPattern + #"\s*"# + groupedNumber
