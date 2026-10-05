@@ -1,64 +1,100 @@
 # Validation Plan
 
-No validation result is claimed by this file. It defines checks that must be run against an identified build.
+This document defines checks for an identified build. Passing CI does not prove live-camera behavior.
 
-## Parser checks
+## Automated core coverage
 
-The automated core corpus covers at minimum:
+The current regression suite covers:
 
 - dot and comma decimal prices;
+- integer price with explicit currency;
+- European zero-cents notation;
 - neighboring currency markers;
-- split whole/cents OCR;
+- split whole/cents OCR with geometry guards;
 - g / kg / г;
 - ml / cl / L / л;
 - pc / pcs / items / шт;
 - x / × multipacks;
 - compact notation such as 250g and 4x250g;
-- missing price;
-- missing quantity;
+- missing price / missing quantity;
 - unit-price-only text;
-- ambiguous decimal quantity such as 1.50 L;
-- incompatible dimensions.
+- quantity-like decimal text such as 1.50 L;
+- different currencies;
+- incompatible dimensions;
+- side-by-side and vertically stacked tag clustering;
+- A/B candidate ordering;
+- comparison-zone geometry;
+- time-based recognition stabilization.
 
-This corpus is regression evidence for deterministic parsing only. It does not prove camera OCR quality.
+For verified source commit `61653ae9`, CI executed 33 tests with 0 failures.
 
-## Comparison checks
+## Required runtime checks on physical iPhone
 
-- equal prices
-- left cheaper
-- right cheaper
-- percentage rounding
-- Decimal precision
-- mass normalization
-- volume normalization
-- count normalization
+### Camera lifecycle
 
-## Runtime checks on iPhone
+- first camera permission grant;
+- permission denied;
+- Open Settings -> grant permission -> return without restarting app;
+- scanner unavailable state;
+- background / foreground return does not show a stale result.
 
-- first camera permission grant
-- permission denied
-- permission restored
-- scanner unavailable
-- two labels side by side
-- two labels vertically offset
-- glare
-- low light
-- angled labels
-- temporary OCR loss
-- move camera from one pair of labels to another
-- mixed mass/volume pair does not produce a winner
+### Recognition / targeting
+
+- exactly two labels side by side;
+- exactly two labels vertically stacked;
+- 3+ valid labels inside the comparison zone -> no automatic pair selection;
+- labels outside the comparison zone are ignored;
+- A/B overlays visually match the recognized labels;
+- move camera from one pair to another without A/B swapping incorrectly.
+
+### Price formats
+
+- normal decimal price;
+- comma decimal price;
+- integer price with currency;
+- zero-cents notation;
+- large whole number + small cents split into separate OCR items;
+- shelf tag containing both package price and `price / kg` -> package price wins.
+
+### Conditions
+
+- glare;
+- low light;
+- angled labels;
+- small type;
+- temporary OCR loss and recovery;
+- quick camera movement.
+
+### Comparison safety
+
+- g vs kg;
+- ml/cl vs L;
+- multipacks;
+- count;
+- equal unit prices;
+- mixed mass / volume -> no winner;
+- explicit different currencies -> no winner.
+
+### Timing
+
+Target on iPhone 12-class hardware:
+
+- UI remains responsive;
+- result appears after the same pair is stable for roughly 350 ms;
+- brief OCR dropout does not flicker away a published result;
+- end-to-end useful result target remains <= 1.5 s after both tags are stably readable.
 
 ## Evidence to capture
 
-For every validation build record:
+For each physical-device validation run record:
 
-- Git commit SHA
-- Xcode version
-- iOS version
-- device model
-- test date
-- pass/fail per required check
-- screenshots/video for observed UI behavior where useful
-- known limitations
+- Git commit SHA;
+- Xcode version;
+- iOS version;
+- device model;
+- test date;
+- PASS / FAIL / BLOCKED per required scenario;
+- screenshots or short video for overlay/timing issues where useful;
+- known limitations.
 
-A successful compile alone is not runtime evidence.
+A successful compile or simulator run alone is not runtime camera evidence.

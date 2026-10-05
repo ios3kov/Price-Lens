@@ -8,8 +8,15 @@ Point the camera at two price tags. The app recognizes price and package size, n
 
 **No manual entry. Camera only.**
 
-## Status
+## Development status
 
-Initial product definition and iOS architecture are being built under AE Development Rules v8.0.0.
+The initial native iOS MVP is implemented on `feat/initial-mvp`.
 
-See `docs/` for the product contract and engineering state.
+Current internally verified source: `61653ae9`
+
+- iOS build: PASS
+- Core tests: 33 / 33 PASS
+- Live physical-iPhone camera validation: NOT RUN
+- Public release: not authorized / not performed
+
+See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/VALIDATION.md` and `docs/EVIDENCE_INITIAL_MVP.md`.

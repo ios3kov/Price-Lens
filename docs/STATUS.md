@@ -2,51 +2,54 @@
 
 ## Current goal
 
-Build the first end-to-end Price Lens iPhone vertical slice:
+First end-to-end Price Lens iPhone MVP:
 
-camera -> OCR -> two tag candidates -> unit normalization -> winner.
+camera -> on-device OCR -> exactly two price-tag candidates -> unit normalization -> comparison result.
 
 ## State
 
 - Repository: ios3kov/Price-Lens
 - Working branch: feat/initial-mvp
-- Standard baseline: AE Development Rules 8.0.0 @ 132b7cd32873ba7328e3128ffbb33e1929b74d45
+- Verified source commit: `61653ae94b15c4c2e29c3e24207f1097ffe10746`
+- Standard baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45`
 - Delivery gate: Development
-- Initial risk profile: Standard
+- Risk profile: Standard
 - Product Discovery: complete for initial v1 scope
 - Reference Audit: not triggered; no concrete external product is a parity target
-- Release: not authorized / not in scope
+- Merge / Release: not authorized and not performed
 
-## Confirmed product decisions
+## Implemented
 
-- iPhone.
-- Camera-first.
-- Two price tags.
-- Automatic price + size recognition.
-- Compare by kg / L / item.
-- No manual entry in the core workflow.
-- Minimal camera overlay.
+- Native Swift / SwiftUI iPhone app, iOS 17+.
+- VisionKit DataScanner live OCR, A12+ capability.
+- Camera permission flow with Settings recovery.
+- On-device processing; no backend, analytics or frame upload.
+- Visible central comparison zone backed by the scanner region of interest.
+- A/B overlays on recognized price tags.
+- Refuses ambiguous frames with more than two valid tags.
+- Parses decimal, comma-decimal, integer-with-currency, zero-cent and split whole/cents prices.
+- Parses mass, volume, count and multipacks.
+- Rejects unit-price text such as `€/kg` as package price.
+- Refuses mixed dimensions and explicitly different currencies.
+- Time-based recognition stabilization and brief OCR-dropout grace period.
+- Pure production core is tested outside iOS Simulator via Swift Package.
 
-## Engineering decisions for first build
+## Internal verification
 
-- Native Swift / SwiftUI.
-- VisionKit DataScanner for live OCR.
-- On-device processing.
-- iOS 17+ initial target.
-- A12+ required capability.
-- Parser and comparison logic isolated from camera APIs.
+For source commit `61653ae9`:
 
-## Current implementation block
+- GitHub Actions run: `37307272302`
+- Xcode 16.4 (16F6)
+- Swift 6.1.2
+- iOS simulator build: PASS
+- Core unit tests: PASS — 33 executed, 0 failures
+- Project TODO/FIXME/fatalError/debug-print audit: no findings
+- Relevant source warnings: none
 
-1. Repository scaffold.
-2. Product contract.
-3. Technical design.
-4. Pure parsing/comparison core.
-5. Live scanner adapter.
-6. Minimal result UI.
-7. Unit tests.
-8. Build/test evidence.
+See `docs/EVIDENCE_INITIAL_MVP.md`.
 
-## Next validation blocker
+## Remaining blocker
 
-A real-device build and camera test is required before the scanning workflow can be claimed as validated.
+The camera workflow is **not yet validated on a physical iPhone**.
+
+Before calling this a Validation Build, run the real-device scenarios in `docs/VALIDATION.md`, especially recognition accuracy, comparison-zone alignment, glare/angle behavior, timing and OCR dropout recovery.
