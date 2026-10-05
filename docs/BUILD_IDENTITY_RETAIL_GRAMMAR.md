@@ -40,8 +40,8 @@
 
 Fill from the new run; no runtime result carries forward from older candidates.
 
-- Local checkout exact commit: NOT_RUN
-- Git dirty state / allowed signing-only diff: NOT_RUN
+- Local checkout exact commit: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf` — USER-REPORTED PASS
+- Git dirty state / allowed signing-only diff: USER-REPORTED PASS — tracked files clean; only Xcode-generated `PriceLens.xcodeproj/project.xcworkspace/` untracked before reopening Xcode
 - Local Xcode version: NOT_RUN
 - Development Team/signing result: NOT_RUN
 - Device model: NOT_RUN
