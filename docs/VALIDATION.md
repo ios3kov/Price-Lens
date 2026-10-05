@@ -4,18 +4,23 @@ No validation result is claimed by this file. It defines checks that must be run
 
 ## Parser checks
 
-- 1.99 + 500 g
-- 1,99 + 500g
-- € 4.50 + 1 kg
-- 4,50 BAM + 1,5 l
-- 6 x 330 ml
-- 6 × 330 ml
-- 10 pcs
-- 10 шт
-- reject missing price
-- reject missing quantity
-- reject unit-price-only text
-- reject incompatible dimensions
+The automated core corpus covers at minimum:
+
+- dot and comma decimal prices;
+- neighboring currency markers;
+- split whole/cents OCR;
+- g / kg / г;
+- ml / cl / L / л;
+- pc / pcs / items / шт;
+- x / × multipacks;
+- compact notation such as 250g and 4x250g;
+- missing price;
+- missing quantity;
+- unit-price-only text;
+- ambiguous decimal quantity such as 1.50 L;
+- incompatible dimensions.
+
+This corpus is regression evidence for deterministic parsing only. It does not prove camera OCR quality.
 
 ## Comparison checks
 

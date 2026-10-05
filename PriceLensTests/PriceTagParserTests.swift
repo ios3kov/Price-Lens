@@ -7,6 +7,70 @@ import XCTest
 #endif
 
 final class PriceTagParserTests: XCTestCase {
+    func testSupportedParserCorpus() throws {
+        struct Case {
+            let name: String
+            let price: String
+            let quantity: String
+            let expectedPrice: String
+            let expectedQuantity: String
+            let dimension: QuantityDimension
+        }
+
+        let cases: [Case] = [
+            .init(name: "compact grams", price: "1.99", quantity: "250g", expectedPrice: "1.99", expectedQuantity: "0.25", dimension: .mass),
+            .init(name: "comma grams", price: "3,49 €", quantity: "750 g", expectedPrice: "3.49", expectedQuantity: "0.75", dimension: .mass),
+            .init(name: "kilograms", price: "4,50 BAM", quantity: "1,5 kg", expectedPrice: "4.50", expectedQuantity: "1.5", dimension: .mass),
+            .init(name: "milliliters", price: "2.10", quantity: "500 ml", expectedPrice: "2.10", expectedQuantity: "0.5", dimension: .volume),
+            .init(name: "centiliters", price: "2,80 €", quantity: "75 cl", expectedPrice: "2.80", expectedQuantity: "0.75", dimension: .volume),
+            .init(name: "liters cyrillic", price: "5.25", quantity: "1,5 л", expectedPrice: "5.25", expectedQuantity: "1.5", dimension: .volume),
+            .init(name: "multipack mass", price: "6.99", quantity: "4x250g", expectedPrice: "6.99", expectedQuantity: "1", dimension: .mass),
+            .init(name: "multipack volume", price: "8.00", quantity: "6 x 330 ml", expectedPrice: "8.00", expectedQuantity: "1.98", dimension: .volume),
+            .init(name: "pieces", price: "6.00", quantity: "6 pcs", expectedPrice: "6.00", expectedQuantity: "6", dimension: .count),
+            .init(name: "pieces cyrillic", price: "8.00", quantity: "10 шт", expectedPrice: "8.00", expectedQuantity: "10", dimension: .count),
+            .init(name: "items", price: "9.99", quantity: "12 items", expectedPrice: "9.99", expectedQuantity: "12", dimension: .count)
+        ]
+
+        for testCase in cases {
+            try XCTContext.runActivity(named: testCase.name) { _ in
+                let candidate = try XCTUnwrap(
+                    PriceTagParser.parse(
+                        cluster: [
+                            item(testCase.price, x: 20, y: 20, height: 44),
+                            item(testCase.quantity, x: 20, y: 70, height: 24)
+                        ]
+                    )
+                )
+
+                XCTAssertEqual(
+                    NSDecimalNumber(decimal: candidate.price).stringValue,
+                    NSDecimalNumber(decimal: Decimal(string: testCase.expectedPrice)!).stringValue
+                )
+                XCTAssertEqual(
+                    NSDecimalNumber(decimal: candidate.normalizedQuantity).stringValue,
+                    NSDecimalNumber(decimal: Decimal(string: testCase.expectedQuantity)!).stringValue
+                )
+                XCTAssertEqual(candidate.dimension, testCase.dimension)
+            }
+        }
+    }
+
+    func testUnsafeParserCorpusIsRejected() {
+        let cases: [[ScannedText]] = [
+            [item("4.99", x: 20, y: 20, height: 44)],
+            [item("500 g", x: 20, y: 20, height: 24)],
+            [
+                item("7.99 / kg", x: 20, y: 20, height: 18),
+                item("500 g", x: 20, y: 55, height: 24)
+            ],
+            [item("1.50 L", x: 20, y: 20, height: 30)]
+        ]
+
+        for cluster in cases {
+            XCTAssertNil(PriceTagParser.parse(cluster: cluster))
+        }
+    }
+
     func testParsesPriceAndGrams() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(
