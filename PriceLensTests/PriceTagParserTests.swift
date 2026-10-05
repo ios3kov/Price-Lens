@@ -1,6 +1,10 @@
 import CoreGraphics
 import XCTest
+#if canImport(PriceLensCore)
+@testable import PriceLensCore
+#else
 @testable import PriceLens
+#endif
 
 final class PriceTagParserTests: XCTestCase {
     func testParsesPriceAndGrams() throws {

@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -22,9 +22,9 @@ jobs:
       - name: Show toolchain
         run: |
           xcodebuild -version
-          xcrun simctl list devices available
+          swift --version
 
-      - name: Build
+      - name: Build iOS app
         run: |
           set -euo pipefail
           xcodebuild \
@@ -35,14 +35,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Unit tests
+      - name: Unit test core
         run: |
           set -euo pipefail
-          xcodebuild \
-            -project PriceLens.xcodeproj \
-            -scheme PriceLens \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
-            -parallel-testing-enabled NO \
-            -maximum-concurrent-test-simulator-destinations 1 \
-            CODE_SIGNING_ALLOWED=NO \
-            test
+          swift test

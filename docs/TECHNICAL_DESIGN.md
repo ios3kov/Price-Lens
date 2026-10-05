@@ -31,7 +31,8 @@ The app is split into four boundaries:
    - Normalizes units.
    - Computes unit price.
    - Decides winner and percentage.
-   - Pure Swift/Foundation where possible.
+   - Pure Swift/Foundation/CoreGraphics only.
+   - The exact same source directory is exposed as a Swift Package target for host-independent CI tests; there is no copied test-only implementation.
 
 4. **SwiftUI presentation**
    - Full-screen scanner.
@@ -101,6 +102,8 @@ Quantity candidates are scored using:
 - OCR prominence;
 - penalties for “per”, slash-unit and unit-price lines.
 
+A bare decimal quantity such as `1.50 L` is not allowed to act as its own price. A single OCR item can supply both price and quantity only when an explicit currency marker disambiguates it.
+
 The parser should return nil rather than choose a weak pair.
 
 ## Privacy
@@ -124,21 +127,27 @@ The camera stream stays inside Apple’s local scanning stack and app memory.
 
 ## Test strategy
 
-### Unit
+### Host-independent unit tests
+
+The exact `PriceLens/Core` production sources are compiled as the `PriceLensCore` Swift Package target and tested with `swift test` on the CI host. This keeps pure parsing and comparison tests independent of iOS Simulator availability.
+
+Coverage includes:
 
 - numeric normalization;
 - price parser;
 - quantity parser;
 - multipack parser;
 - unit conversion;
+- ambiguous same-line OCR;
+- neighboring currency marker;
 - comparison percentage;
 - incompatible dimensions.
 
-### Integration
+### iOS build integration
 
-- scanner adapter maps recognized items correctly;
-- permission/unavailable states;
-- rapid OCR updates do not flicker result state.
+`xcodebuild` compiles the full iOS app target against the iOS Simulator SDK on every CI run. This verifies that the camera adapter, SwiftUI layer and core compile together.
+
+Simulator/unit tests do not claim real camera semantics.
 
 ### Device validation
 
