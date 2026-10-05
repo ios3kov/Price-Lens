@@ -57,6 +57,12 @@ final class ScannerModel: ObservableObject {
         guard candidates.count >= 2 else {
             missingUpdateCount += 1
 
+            // Preserve a valid result through a couple of transient OCR drops.
+            // Live text tracking can briefly lose a line while the camera moves.
+            if case .result = scanState, missingUpdateCount < 3 {
+                return
+            }
+
             if candidates.count == 1 {
                 scanState = .oneTagFound
             } else if missingUpdateCount >= 3 {
