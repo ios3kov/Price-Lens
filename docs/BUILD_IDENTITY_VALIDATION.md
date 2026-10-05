@@ -34,9 +34,9 @@ Status meanings follow AS Development Rules 4.1.0. This record does not claim a 
 
 ## Local signed build — fill during device run
 
-- Local checkout commit: NOT_RUN
-- Git dirty state: NOT_RUN
-- Local Xcode version: NOT_RUN
+- Local checkout commit: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06` — USER-REPORTED PASS
+- Git dirty state: clean (`git status --short` produced no output) — USER-REPORTED PASS
+- Local Xcode version: Xcode 27.0, build 27A266a — USER-REPORTED
 - Selected Development Team: NOT_RUN
 - Connected device model: NOT_RUN
 - iOS version: NOT_RUN
