@@ -1,0 +1,16 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Swift
+.build/
+
+# macOS
+.DS_Store
+
+# Local evidence
+artifacts/local/
