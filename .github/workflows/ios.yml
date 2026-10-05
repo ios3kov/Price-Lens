@@ -35,6 +35,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Build iPhone device target
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project PriceLens.xcodeproj \
+            -scheme PriceLens \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
       - name: Unit test core
         run: |
           set -euo pipefail

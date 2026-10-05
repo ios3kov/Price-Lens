@@ -97,4 +97,4 @@ For each physical-device validation run record:
 - screenshots or short video for overlay/timing issues where useful;
 - known limitations.
 
-A successful compile or simulator run alone is not runtime camera evidence.
+CI must compile both the simulator target and an unsigned `iphoneos` device target. These builds prove compilation only; they do not replace physical-camera runtime evidence.
