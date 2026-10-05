@@ -33,8 +33,8 @@ New regression coverage includes:
 
 Fill from the new run; no runtime result carries forward from `a2d9d9e0` or `8450963d`.
 
-- Local checkout exact commit: NOT_RUN
-- Git dirty state / allowed signing-only diff: NOT_RUN
+- Local checkout exact commit: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — USER-REPORTED PASS
+- Git dirty state / allowed signing-only diff: USER-REPORTED PASS — only local `DEVELOPMENT_TEAM` in `project.pbxproj` plus Xcode-generated workspace metadata; `Info.plist` restored
 - Local Xcode version: NOT_RUN
 - Development Team/signing result: NOT_RUN
 - Device model: NOT_RUN
