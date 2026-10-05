@@ -331,6 +331,83 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.price, Decimal(1299))
     }
 
+    func testParsesIntegerPriceWithNearbyCurrencyFragment() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4", x: 20, y: 20, width: 54, height: 44),
+                    item("€", x: 80, y: 30, width: 24, height: 22),
+                    item("500 g", x: 20, y: 78, width: 120, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(4))
+        XCTAssertEqual(candidate.currencyToken, "€")
+    }
+
+    func testRepairsMissingDecimalSeparatorWithCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4 99 €", x: 20, y: 20, width: 120, height: 44),
+                    item("500 g", x: 20, y: 76, width: 120, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "4.99"))
+    }
+
+    func testRepairsMissingDecimalSeparatorWithNearbyCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4 99", x: 20, y: 20, width: 92, height: 44),
+                    item("€", x: 116, y: 30, width: 24, height: 22),
+                    item("500 g", x: 20, y: 76, width: 120, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "4.99"))
+    }
+
+    func testNearbyCurrencyDoesNotTurnQuantityLineIntoPrice() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("1.50 L", x: 20, y: 20, width: 100, height: 34),
+                item("€", x: 126, y: 28, width: 24, height: 22),
+                item("500 g", x: 20, y: 72, width: 120, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
+    func testPriceLineWithCurrencyIsNotUsedAsNearbyCurrencyMarker() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("4", x: 20, y: 20, width: 50, height: 44),
+                item("€7.99", x: 76, y: 22, width: 72, height: 34),
+                item("500 g", x: 20, y: 76, width: 120, height: 24)
+            ]
+        )
+
+        XCTAssertEqual(candidate?.price, Decimal(string: "7.99"))
+    }
+
+    func testRejectsMissingDecimalSeparatorWithoutCurrency() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("4 99", x: 20, y: 20, width: 92, height: 44),
+                item("500 g", x: 20, y: 76, width: 120, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
     func testParsesIntegerPriceWithSuffixCurrency() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(

@@ -24,7 +24,15 @@ enum PriceTagParser {
 
         guard !usable.isEmpty else { return nil }
 
-        let prices = usable.compactMap(priceMatch) + splitPriceMatches(in: usable)
+        let prices = usable.compactMap { item in
+            priceMatch(
+                item,
+                inheritedCurrency: nearbyCurrencyToken(
+                    for: item,
+                    in: usable
+                )
+            )
+        } + splitPriceMatches(in: usable)
         let quantities = usable.compactMap(quantityMatch)
 
         let pairs = prices.flatMap { price in
@@ -73,9 +81,13 @@ enum PriceTagParser {
         )
     }
 
-    private static func priceMatch(_ item: ScannedText) -> PriceMatch? {
+    private static func priceMatch(
+        _ item: ScannedText,
+        inheritedCurrency: String? = nil
+    ) -> PriceMatch? {
         let text = item.transcript
-        let currency = currencyToken(in: text)
+        let directCurrency = currencyToken(in: text)
+        let currency = directCurrency ?? inheritedCurrency
 
         guard let value = priceValue(in: text, currency: currency) else {
             return nil
@@ -94,12 +106,14 @@ enum PriceTagParser {
 
         // A line like "1.50 L" is quantity, not price. One-line
         // price+quantity is accepted only when currency makes the price explicit.
-        if containsAnySupportedUnit(lower), currency == nil {
+        if containsAnySupportedUnit(lower), directCurrency == nil {
             return nil
         }
 
-        if currency != nil {
+        if directCurrency != nil {
             score += 2.0
+        } else if currency != nil {
+            score += 1.0
         }
 
         return PriceMatch(
@@ -137,8 +151,38 @@ enum PriceTagParser {
             }
         }
 
-        // Integer-only prices are accepted only when the currency is directly
-        // adjacent, so "500 ml €4" yields 4 rather than 500.
+        // OCR can occasionally drop the decimal separator and return "4 99".
+        // Only repair that form when a currency marker disambiguates it.
+        if currency != nil {
+            let missingSeparatorPattern = #"(?<!\d)(\d{1,4})\s+(\d{2})(?!\d)"#
+            if let match = firstMatch(
+                pattern: missingSeparatorPattern,
+                in: text
+            ),
+               let wholeRaw = capturedString(
+                match,
+                group: 1,
+                text: text
+               ),
+               let centsRaw = capturedString(
+                match,
+                group: 2,
+                text: text
+               ),
+               let whole = Decimal(
+                string: wholeRaw,
+                locale: Locale(identifier: "en_US_POSIX")
+               ),
+               let cents = Decimal(
+                string: centsRaw,
+                locale: Locale(identifier: "en_US_POSIX")
+               ) {
+                return whole + (cents / 100)
+            }
+        }
+
+        // Integer-only prices are accepted only when currency is explicit on
+        // the same OCR item or on a nearby currency-only fragment.
         guard currency != nil else {
             return nil
         }
@@ -384,6 +428,53 @@ enum PriceTagParser {
     private static func containsAnySupportedUnit(_ text: String) -> Bool {
         ["kg", "кг", " ml", "мл", " cl", " l", " л", " g", "гр", " г", "item", "pc", "pcs", "шт"]
             .contains(where: text.contains)
+    }
+
+    private static func nearbyCurrencyToken(
+        for item: ScannedText,
+        in items: [ScannedText]
+    ) -> String? {
+        let reachX = max(42, item.bounds.height * 1.35)
+        let reachY = max(28, item.bounds.height * 0.85)
+        let searchBounds = item.bounds.insetBy(
+            dx: -reachX,
+            dy: -reachY
+        )
+
+        return items
+            .filter { $0.id != item.id }
+            .compactMap { candidate -> (String, CGFloat)? in
+                guard searchBounds.intersects(candidate.bounds),
+                      let token = standaloneCurrencyToken(
+                        in: candidate.transcript
+                      ) else {
+                    return nil
+                }
+
+                let dx = candidate.bounds.midX - item.bounds.midX
+                let dy = candidate.bounds.midY - item.bounds.midY
+                return (token, (dx * dx) + (dy * dy))
+            }
+            .min(by: { $0.1 < $1.1 })?
+            .0
+    }
+
+    private static func standaloneCurrencyToken(
+        in text: String
+    ) -> String? {
+        let pattern = #"(?i)^\s*(€|\$|£|EUR|USD|GBP|BAM|KM)\s*$"#
+        guard let match = firstMatch(pattern: pattern, in: text),
+              let token = capturedString(
+                match,
+                group: 1,
+                text: text
+              ) else {
+            return nil
+        }
+
+        return ["€", "$", "£"].contains(token)
+            ? token
+            : token.uppercased()
     }
 
     private static func currencyToken(in text: String) -> String? {

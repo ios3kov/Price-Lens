@@ -44,8 +44,10 @@ Examples:
 - 4,- € / 4.–
 - grouped prices such as 1 299,99 / 1.299,99 / 1,299.99
 - split OCR such as large `4` + small `99` / `99 €` when the fragments are spatially one price
+- separate nearby currency fragments such as `4` + `€`
+- missing decimal separator such as `4 99 €` when currency makes the intent unambiguous
 
-A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Integer-only prices require an adjacent explicit currency; zero-cents notation such as `4,-` is accepted without one. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected.
+A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Integer-only prices require an adjacent explicit currency; zero-cents notation such as `4,-` is accepted without one. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected. A missing decimal separator is repaired only when currency is explicit on the price item or a nearby currency fragment; bare `4 99` remains rejected.
 
 ### Mass
 
