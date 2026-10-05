@@ -370,13 +370,17 @@ enum PriceTagParser {
     }
 
     private static func currencyToken(in text: String) -> String? {
-        let upper = text.uppercased()
-        for token in ["BAM", "EUR", "USD", "GBP", "KM", "€", "$", "£"] {
-            if upper.contains(token) {
-                return token
-            }
+        for symbol in ["€", "$", "£"] where text.contains(symbol) {
+            return symbol
         }
-        return nil
+
+        let pattern = #"(?i)(?<![A-Z])(BAM|EUR|USD|GBP|KM)(?![A-Z])"#
+        guard let match = firstMatch(pattern: pattern, in: text),
+              let token = capturedString(match, group: 1, text: text) else {
+            return nil
+        }
+
+        return token.uppercased()
     }
 
     private static func firstMatch(

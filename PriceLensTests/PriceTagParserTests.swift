@@ -185,6 +185,45 @@ final class PriceTagParserTests: XCTestCase {
         }
     }
 
+    func testCurrencyCodeRequiresTokenBoundary() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("BAMBOO 4.99", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertNil(candidate.currencyToken)
+    }
+
+    func testRecognizesStandaloneBAMCurrencyCode() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99 BAM", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.currencyToken, "BAM")
+    }
+
+    func testRecognizesStandaloneKMCurrencyCode() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99 KM", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.currencyToken, "KM")
+    }
+
     func testParsesPriceAndGrams() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(
