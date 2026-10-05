@@ -117,7 +117,7 @@ OCR confidence or parsing confidence is below the safe threshold.
 
 ### Camera unavailable
 
-Permission denied, restriction, unsupported hardware or scanner runtime failure. Permission denial offers an Open Settings action; returning to the app re-checks access without requiring a restart.
+Permission denied, restriction, unsupported hardware or scanner runtime failure. Permission denial offers an Open Settings action; returning to the app re-checks access without requiring a restart. A transient scanner/runtime failure offers Try Again without restarting the app.
 
 ## UX contract
 

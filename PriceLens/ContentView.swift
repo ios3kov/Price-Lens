@@ -61,10 +61,7 @@ struct ContentView: View {
             )
 
         case .failed(let message):
-            unavailableView(
-                title: "Camera unavailable",
-                detail: message
-            )
+            cameraFailedView(message)
         }
     }
 
@@ -148,6 +145,30 @@ struct ContentView: View {
         default:
             EmptyView()
         }
+    }
+
+    private func cameraFailedView(_ message: String) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "camera.fill")
+                .font(.system(size: 28, weight: .semibold))
+
+            Text("Camera unavailable")
+                .font(.headline)
+
+            Text(message)
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+
+            Button("Try Again") {
+                Task {
+                    await scannerModel.prepareCamera()
+                }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(24)
+        .foregroundStyle(.white)
     }
 
     private var cameraDeniedView: some View {
