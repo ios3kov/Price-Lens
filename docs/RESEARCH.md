@@ -31,3 +31,19 @@ Use VisionKit `DataScannerViewController` for the first live OCR implementation.
 VisionKit is behind an app-owned adapter. Parsing and comparison do not depend on VisionKit types.
 
 If on-device validation shows insufficient grouping control, frame rate or OCR quality, the scanner boundary can be replaced with AVFoundation + Vision without rewriting the comparison core.
+
+
+## OCR quality level
+
+Initial implementation uses `DataScannerViewController.QualityLevel.accurate`.
+
+Apple documents `.accurate` as the mode that prioritizes recognition accuracy and specifically recommends it for smaller text and barcodes. Shelf-label text is frequently small, so correctness is the safer initial tradeoff for Price Lens.
+
+Source:
+
+- Apple Developer Documentation — DataScannerViewController.QualityLevel.accurate
+  https://developer.apple.com/documentation/visionkit/datascannerviewcontroller/qualitylevel-swift.enum/accurate
+- Apple Developer Documentation — qualityLevel
+  https://developer.apple.com/documentation/visionkit/datascannerviewcontroller/qualitylevel-swift.property
+
+The performance cost must still be measured on the physical validation device against the <= 1.5 s end-to-end target.

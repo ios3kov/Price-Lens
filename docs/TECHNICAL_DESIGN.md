@@ -17,6 +17,7 @@ The app is split into four boundaries:
 
 1. **Camera/OCR adapter**
    - VisionKit DataScannerViewController.
+   - `.accurate` quality level because shelf-label text is often small; physical-device validation must confirm the speed tradeoff.
    - Live recognized text items.
    - Camera permission / availability handling.
    - A shared ScanRegionLayout defines the visible comparison guide and DataScannerViewController.regionOfInterest in the same view-coordinate system.
