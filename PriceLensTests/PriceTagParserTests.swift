@@ -266,6 +266,32 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.price, Decimal(string: "1299.99"))
     }
 
+    func testParsesNBSPGroupedDecimalPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("1\u{00A0}299,99 €", x: 20, y: 20, height: 44),
+                    item("1 kg", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "1299.99"))
+    }
+
+    func testParsesNarrowNBSPGroupedDecimalPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("1\u{202F}299,99 €", x: 20, y: 20, height: 44),
+                    item("1 kg", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "1299.99"))
+    }
+
     func testParsesUSGroupedDecimalPrice() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(

@@ -114,7 +114,7 @@ enum PriceTagParser {
         in text: String,
         currency: String?
     ) -> Decimal? {
-        let groupedDecimalPattern = #"(?<!\d)(\d{1,3}(?:[ \u{00A0}\u{202F}\.,]\d{3})+[\.,]\d{2})(?!\d)"#
+        let groupedDecimalPattern = #"(?<!\d)(\d{1,3}(?:[\s\.,]\d{3})+[\.,]\d{2})(?!\d)"#
         let decimalPattern = #"(?<!\d)(\d{1,4}[\.,]\d{2})(?!\d)"#
 
         for pattern in [groupedDecimalPattern, decimalPattern] {
@@ -126,7 +126,7 @@ enum PriceTagParser {
         }
 
         // Common European zero-cents notation: 4,- / 4.- / 4.–
-        let groupedZeroCentsPattern = #"(?<!\d)(\d{1,3}(?:[ \u{00A0}\u{202F}\.,]\d{3})+)\s*[\.,]\s*[-–—](?!\d)"#
+        let groupedZeroCentsPattern = #"(?<!\d)(\d{1,3}(?:[\s\.,]\d{3})+)\s*[\.,]\s*[-–—](?!\d)"#
         let zeroCentsPattern = #"(?<!\d)(\d{1,4})\s*[\.,]\s*[-–—](?!\d)"#
 
         for pattern in [groupedZeroCentsPattern, zeroCentsPattern] {
@@ -144,7 +144,7 @@ enum PriceTagParser {
         }
 
         let currencyPattern = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)"#
-        let groupedNumber = #"(\d{1,3}(?:[ \u{00A0}\u{202F}\.,]\d{3})+)"#
+        let groupedNumber = #"(\d{1,3}(?:[\s\.,]\d{3})+)"#
         let groupedPrefixed = #"(?i)"# + currencyPattern + #"\s*"# + groupedNumber
         let groupedSuffixed = #"(?i)(?<!\d)"# + groupedNumber + #"\s*"# + currencyPattern
 
