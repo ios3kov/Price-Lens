@@ -144,6 +144,7 @@ final class PriceTagParserTests: XCTestCase {
 
         XCTAssertEqual(comparison.winner, .right)
         XCTAssertEqual(comparison.roundedPercent, 25)
+        XCTAssertEqual(comparison.headline, "B is 25% cheaper per kg")
     }
 
     func testRejectsMixedDimensions() throws {

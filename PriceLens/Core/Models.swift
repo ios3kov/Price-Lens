@@ -85,9 +85,9 @@ struct PriceComparison: Equatable {
     var headline: String {
         switch winner {
         case .left:
-            return "LEFT is \(roundedPercent)% cheaper per \(unitLabel)"
+            return "A is \(roundedPercent)% cheaper per \(unitLabel)"
         case .right:
-            return "RIGHT is \(roundedPercent)% cheaper per \(unitLabel)"
+            return "B is \(roundedPercent)% cheaper per \(unitLabel)"
         case .equal:
             return "Same price per \(unitLabel)"
         }
