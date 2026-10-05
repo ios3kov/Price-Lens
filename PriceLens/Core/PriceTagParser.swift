@@ -608,30 +608,19 @@ enum PriceTagParser {
         guard firstMatch(
             pattern: pattern,
             in: normalized
-        ) != nil,
-              let canonical = RetailLexicon.canonicalCurrency(
-                in: normalized
-              ) else {
+        ) != nil else {
             return nil
         }
 
-        return RetailLexicon.displayCurrency(
-            canonical: canonical
+        return RetailLexicon.displayCurrencyToken(
+            in: normalized
         )
     }
 
     private static func currencyToken(
         in text: String
     ) -> String? {
-        guard let canonical = RetailLexicon.canonicalCurrency(
-            in: RetailLexicon.normalizePriceText(text)
-        ) else {
-            return nil
-        }
-
-        return RetailLexicon.displayCurrency(
-            canonical: canonical
-        )
+        RetailLexicon.displayCurrencyToken(in: text)
     }
 
     private static func firstMatch(

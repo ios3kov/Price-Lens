@@ -207,6 +207,59 @@ enum RetailLexicon {
         return nil
     }
 
+    static func displayCurrencyToken(
+        in text: String
+    ) -> String? {
+        let normalized = normalizePriceText(text)
+
+        let simpleSymbols = [
+            "€", "£", "₽", "₴", "₸", "₺", "₾", "₼",
+            "₹", "₩", "₫", "₪", "₱", "฿", "₦", "₡",
+            "₲", "₵", "₭", "₮", "¥", "￥", "元"
+        ]
+
+        for symbol in simpleSymbols where normalized.contains(symbol) {
+            return symbol == "￥" ? "¥" : symbol
+        }
+
+        for (symbol, code) in symbolCurrencies
+        where normalized.localizedCaseInsensitiveContains(symbol) {
+            // Composite/regional symbols are safer to show canonically.
+            return code
+        }
+
+        if normalized.contains("$") {
+            return "$"
+        }
+
+        let words = normalized
+            .uppercased()
+            .components(
+                separatedBy: CharacterSet.alphanumerics.inverted
+            )
+            .filter { !$0.isEmpty }
+
+        for word in words {
+            if word.count == 3, isoCurrencyCodes.contains(word) {
+                return word
+            }
+
+            if let canonical = wordCurrencyAliases[word] {
+                if word == "KM" {
+                    return "KM"
+                }
+
+                if canonical == "RUB" {
+                    return "₽"
+                }
+
+                return word
+            }
+        }
+
+        return nil
+    }
+
     static func displayCurrency(
         canonical: String?
     ) -> String? {
