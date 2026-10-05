@@ -26,6 +26,21 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 - Reference Audit: not triggered; no concrete external product is a parity target
 - Merge / Release: not authorized and not performed
 
+### Parallel global-retail grammar branch
+
+- Branch: `feat/global-retail-grammar`
+- Implementation commit: `9e933b6d3b2b1ec5d0b424a4eee1339174d0dff7`
+- CI run: `37369541422` — PASS
+- Core regression suite: 101 / 101 PASS
+- iOS Simulator build: PASS
+- unsigned iPhone device-target build: PASS
+- bundle identity / privacy manifest: PASS
+- physical iPhone validation: NOT_RUN
+- merge into `feat/initial-mvp`: NOT AUTHORIZED / NOT PERFORMED
+- Evidence: `docs/EVIDENCE_GLOBAL_RETAIL_GRAMMAR_PREP.md`
+
+This branch broadens currency/number/unit grammar using Apple locale data plus CLDR-informed structural parsing. It is deliberately isolated from the current physical candidate until branch verification and physical adoption are explicitly accepted.
+
 ## Implemented
 
 - Native Swift / SwiftUI iPhone app, iOS 17+.
