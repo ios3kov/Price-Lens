@@ -93,7 +93,8 @@ Price candidates are scored using:
 - currency marker present;
 - decimal amount with two fraction digits;
 - OCR text height / prominence;
-- penalties for lines that look like “per kg”, “100 g”, unit price or explanatory text.
+- penalties for lines that look like “per kg”, “100 g”, unit price or explanatory text;
+- reconstruction of split whole/cents OCR only when the two numeric fragments are horizontally adjacent, vertically aligned and have plausible relative text size.
 
 ### Quantity scoring
 

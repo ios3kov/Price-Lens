@@ -23,6 +23,34 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.unitPrice, Decimal(string: "9.98"))
     }
 
+    func testParsesPriceSplitIntoWholeAndCentsOCRItems() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4", x: 20, y: 20, width: 58, height: 52),
+                    item("99 €", x: 82, y: 24, width: 46, height: 30),
+                    item("500 g", x: 20, y: 82, width: 120, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "4.99"))
+        XCTAssertEqual(candidate.currencyToken, "€")
+        XCTAssertEqual(candidate.unitPrice, Decimal(string: "9.98"))
+    }
+
+    func testRejectsDistantWholeAndCentsFragments() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("4", x: 20, y: 20, width: 58, height: 52),
+                item("99", x: 260, y: 20, width: 44, height: 30),
+                item("500 g", x: 20, y: 82, width: 120, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
     func testParsesCommaDecimalAndLiters() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(
@@ -263,12 +291,13 @@ final class PriceTagParserTests: XCTestCase {
         _ transcript: String,
         x: CGFloat,
         y: CGFloat,
+        width: CGFloat = 130,
         height: CGFloat
     ) -> ScannedText {
         ScannedText(
             id: UUID(),
             transcript: transcript,
-            bounds: CGRect(x: x, y: y, width: 130, height: height),
+            bounds: CGRect(x: x, y: y, width: width, height: height),
             confidence: 0.95
         )
     }

@@ -38,8 +38,9 @@ Examples:
 - 1,99 €
 - 4.50 KM
 - 4,50 BAM
+- split OCR such as large `4` + small `99` / `99 €` when the fragments are spatially one price
 
-A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line.
+A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected.
 
 ### Mass
 

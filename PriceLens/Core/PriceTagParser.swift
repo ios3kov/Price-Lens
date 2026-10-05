@@ -24,7 +24,7 @@ enum PriceTagParser {
 
         guard !usable.isEmpty else { return nil }
 
-        let prices = usable.compactMap(priceMatch)
+        let prices = usable.compactMap(priceMatch) + splitPriceMatches(in: usable)
         let quantities = usable.compactMap(quantityMatch)
 
         let pairs = prices.flatMap { price in
@@ -105,6 +105,121 @@ enum PriceTagParser {
             currency: currency,
             score: score,
             source: item
+        )
+    }
+
+    private static func splitPriceMatches(
+        in items: [ScannedText]
+    ) -> [PriceMatch] {
+        let wholeCandidates = items.compactMap { item -> (ScannedText, Decimal)? in
+            guard !containsUnitPriceCue(item.transcript.lowercased()),
+                  !containsAnySupportedUnit(item.transcript.lowercased()),
+                  let value = plainIntegerValue(in: item.transcript, digits: 1...4) else {
+                return nil
+            }
+            return (item, value)
+        }
+
+        let fractionCandidates = items.compactMap { item -> (ScannedText, Decimal)? in
+            guard !containsUnitPriceCue(item.transcript.lowercased()),
+                  !containsAnySupportedUnit(item.transcript.lowercased()),
+                  let value = plainIntegerValue(in: item.transcript, digits: 2...2) else {
+                return nil
+            }
+            return (item, value)
+        }
+
+        return wholeCandidates.flatMap { wholeItem, wholeValue in
+            fractionCandidates.compactMap { fractionItem, fractionValue in
+                guard wholeItem.id != fractionItem.id,
+                      looksLikeSplitPrice(
+                        whole: wholeItem.bounds,
+                        fraction: fractionItem.bounds
+                      ) else {
+                    return nil
+                }
+
+                let price = wholeValue + (fractionValue / 100)
+                let combinedBounds = wholeItem.bounds.union(fractionItem.bounds)
+                let combinedTranscript = wholeItem.transcript + "." + fractionItem.transcript
+                let currency = currencyToken(in: wholeItem.transcript)
+                    ?? currencyToken(in: fractionItem.transcript)
+
+                var score =
+                    Double(min(wholeItem.confidence, fractionItem.confidence)) * 2.0
+                    + min(Double(combinedBounds.height / 24.0), 2.0)
+                    + 1.0
+
+                if currency != nil {
+                    score += 2.0
+                }
+
+                let source = ScannedText(
+                    id: UUID(),
+                    transcript: combinedTranscript,
+                    bounds: combinedBounds,
+                    confidence: min(wholeItem.confidence, fractionItem.confidence)
+                )
+
+                return PriceMatch(
+                    value: price,
+                    currency: currency,
+                    score: score,
+                    source: source
+                )
+            }
+        }
+    }
+
+    private static func looksLikeSplitPrice(
+        whole: CGRect,
+        fraction: CGRect
+    ) -> Bool {
+        guard fraction.midX > whole.midX else {
+            return false
+        }
+
+        let horizontalGap = fraction.minX - whole.maxX
+        let maxGap = max(26, whole.height * 0.9)
+
+        guard horizontalGap <= maxGap else {
+            return false
+        }
+
+        let verticalCenterDistance = abs(fraction.midY - whole.midY)
+        let allowedVerticalDistance = max(22, max(whole.height, fraction.height) * 0.72)
+
+        guard verticalCenterDistance <= allowedVerticalDistance else {
+            return false
+        }
+
+        // Small cents are common, but fragments with wildly different scale
+        // are more likely unrelated OCR than one shelf price.
+        guard fraction.height >= whole.height * 0.30,
+              fraction.height <= whole.height * 1.35 else {
+            return false
+        }
+
+        return true
+    }
+
+    private static func plainIntegerValue(
+        in text: String,
+        digits: ClosedRange<Int>
+    ) -> Decimal? {
+        let currency = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)?"#
+        let pattern = #"(?i)^\s*"# + currency + #"\s*(\d{"#
+            + String(digits.lowerBound) + #","# + String(digits.upperBound)
+            + #"})\s*"# + currency + #"\s*$"#
+
+        guard let match = firstMatch(pattern: pattern, in: text),
+              let raw = capturedString(match, group: 1, text: text) else {
+            return nil
+        }
+
+        return Decimal(
+            string: raw,
+            locale: Locale(identifier: "en_US_POSIX")
         )
     }
 
