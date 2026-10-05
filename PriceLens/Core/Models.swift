@@ -396,7 +396,7 @@ struct PriceComparison: Equatable {
             return amount
         }
 
-        if ["€", "$", "£"].contains(currencyToken) {
+        if ["€", "$", "£", "₽"].contains(currencyToken) {
             return "\(currencyToken)\(amount)"
         }
         return "\(amount) \(currencyToken)"
@@ -405,6 +405,7 @@ struct PriceComparison: Equatable {
 
 enum ScanState: Equatable {
     case searching
+    case textFound
     case reading
     case ready
     case alreadyAdded

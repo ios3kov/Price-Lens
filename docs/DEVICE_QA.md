@@ -100,3 +100,25 @@ D28/D29 are blocking and trigger a product-workflow change.
 | M13 | Move between labels | Previous items remain intact while current preview changes | NOT_RUN | |
 | M14 | Background / foreground | Comparison set survives ordinary background; current preview resets safely | NOT_RUN | |
 | M15 | VoiceOver | Add, remove, clear, best item and recognized values are understandable | NOT_RUN | |
+
+## Historical physical OCR result — candidate d33616b9
+
+Evidence source: user-reported physical iPhone run and screenshot in the active ChatGPT session.
+
+| ID | Scenario | Status | Evidence / issue |
+| --- | --- | --- | --- |
+| D01 | Local signed install | PASS | Multi-item candidate launched on physical iPhone. |
+| M01 | First-use single-label instruction | PASS / PARTIAL | Screen clearly asks to scan one label, but no recognition result appeared. |
+| M02 | Stable recognition preview | FAIL | Real Russian promotional shelf label stayed at "Scan a price label"; no candidate preview / Add state. |
+| R01 | Russian ₽ split-price label | FAIL | Label contained prominent 229 + 99₽, old 269 + 99, 200Г, discount text; app returned no parsed candidate. |
+
+R01 is blocking.
+
+## Required retest after RUB/language-hint fix
+
+| ID | Scenario | Expected | Status | Evidence / issue |
+| --- | --- | --- | --- | --- |
+| R02 | Same Russian shelf label | Current price 229.99 ₽ + 200 g reaches Label ready | NOT_RUN | |
+| R03 | OCR diagnostic state | If OCR text exists but parser still fails, UI shows Text found | NOT_RUN | |
+| R04 | ₽ vs RUB | Same-currency comparison is accepted | NOT_RUN | |
+| R05 | Old promotional price | Smaller old 269.99 does not beat prominent current 229.99 | NOT_RUN | |

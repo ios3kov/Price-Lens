@@ -206,7 +206,7 @@ enum PriceTagParser {
             return value
         }
 
-        let currencyPattern = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)"#
+        let currencyPattern = #"(?:€|\$|£|₽|EUR|USD|GBP|BAM|KM|RUB|РУБ)"#
         let groupedNumber = #"(\d{1,3}(?:[\s\.,]\d{3})+)"#
         let groupedPrefixed = #"(?i)"# + currencyPattern + #"\s*"# + groupedNumber
         let groupedSuffixed = #"(?i)(?<!\d)"# + groupedNumber + #"\s*"# + currencyPattern
@@ -348,7 +348,7 @@ enum PriceTagParser {
         in text: String,
         digits: ClosedRange<Int>
     ) -> Decimal? {
-        let currency = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)?"#
+        let currency = #"(?:€|\$|£|₽|EUR|USD|GBP|BAM|KM|RUB|РУБ)?"#
         let pattern = #"(?i)^\s*"# + currency + #"\s*(\d{"#
             + String(digits.lowerBound) + #","# + String(digits.upperBound)
             + #"})\s*"# + currency + #"\s*$"#
@@ -540,7 +540,7 @@ enum PriceTagParser {
     private static func standaloneCurrencyToken(
         in text: String
     ) -> String? {
-        let pattern = #"(?i)^\s*(€|\$|£|EUR|USD|GBP|BAM|KM)\s*$"#
+        let pattern = #"(?i)^\s*(€|\$|£|₽|EUR|USD|GBP|BAM|KM|RUB|РУБ)\s*$"#
         guard let match = firstMatch(pattern: pattern, in: text),
               let token = capturedString(
                 match,
@@ -550,17 +550,17 @@ enum PriceTagParser {
             return nil
         }
 
-        return ["€", "$", "£"].contains(token)
+        return ["€", "$", "£", "₽"].contains(token)
             ? token
             : token.uppercased()
     }
 
     private static func currencyToken(in text: String) -> String? {
-        for symbol in ["€", "$", "£"] where text.contains(symbol) {
+        for symbol in ["€", "$", "£", "₽"] where text.contains(symbol) {
             return symbol
         }
 
-        let pattern = #"(?i)(?<![A-Z])(BAM|EUR|USD|GBP|KM)(?![A-Z])"#
+        let pattern = #"(?i)(?<![A-ZА-Я])(BAM|EUR|USD|GBP|KM|RUB|РУБ)(?![A-ZА-Я])"#
         guard let match = firstMatch(pattern: pattern, in: text),
               let token = capturedString(match, group: 1, text: text) else {
             return nil

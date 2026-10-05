@@ -918,6 +918,74 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(ordered.last?.price, Decimal(string: "7.49"))
     }
 
+    func testParsesRussianRubleSplitShelfPriceWithOldPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("-15% СКИДКА", x: 10, y: 10, width: 90, height: 24),
+                    item("ПЕЧЕНЬЕ ШОКОЛАЙТ", x: 120, y: 14, width: 180, height: 22),
+                    item("200Г ОРЕХ, КРЕМ С ФРУКТОВОЙ", x: 120, y: 42, width: 230, height: 22),
+                    item("Без карты", x: 110, y: 82, width: 90, height: 18),
+                    item("269", x: 205, y: 78, width: 58, height: 30),
+                    item("99", x: 266, y: 82, width: 24, height: 16),
+                    item("229", x: 145, y: 118, width: 150, height: 82),
+                    item("99₽", x: 300, y: 145, width: 48, height: 34),
+                    item("ШТ", x: 306, y: 188, width: 36, height: 20)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "229.99"))
+        XCTAssertEqual(candidate.currencyToken, "₽")
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.2"))
+        XCTAssertEqual(candidate.dimension, .mass)
+    }
+
+    func testParsesRussianRubleDecimalPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("229,99 ₽", x: 20, y: 20, width: 150, height: 50),
+                    item("200 г", x: 20, y: 80, width: 90, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "229.99"))
+        XCTAssertEqual(candidate.currencyToken, "₽")
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.2"))
+    }
+
+    func testRubleSymbolAndCodeAreSameCurrency() throws {
+        let symbol = ProductCandidate(
+            id: UUID(),
+            price: Decimal(string: "229.99")!,
+            currencyToken: "₽",
+            normalizedQuantity: Decimal(string: "0.2")!,
+            dimension: .mass,
+            sourceBounds: .zero,
+            confidence: 0.9,
+            rawText: ""
+        )
+        let code = ProductCandidate(
+            id: UUID(),
+            price: Decimal(string: "799")!,
+            currencyToken: "RUB",
+            normalizedQuantity: Decimal(string: "1")!,
+            dimension: .mass,
+            sourceBounds: .zero,
+            confidence: 0.9,
+            rawText: ""
+        )
+
+        let comparison = try ComparisonEngine.compare(
+            left: symbol,
+            right: code
+        ).get()
+
+        XCTAssertEqual(comparison.winner, .right)
+    }
+
     func testComparisonSessionAddsAndRanksMultipleItems() {
         var session = ComparisonSession()
 

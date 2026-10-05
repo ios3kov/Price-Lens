@@ -55,6 +55,7 @@ enum ComparisonEngine {
         case "€", "EUR": return "EUR"
         case "$", "USD": return "USD"
         case "£", "GBP": return "GBP"
+        case "₽", "RUB", "РУБ": return "RUB"
         case "KM", "BAM": return "BAM"
         default: return upper
         }

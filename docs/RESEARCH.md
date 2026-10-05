@@ -224,3 +224,64 @@ Required before closing the workflow change:
 - physical test adding at least three products;
 - confirm earlier items remain visible/removable while scanning the next;
 - confirm incompatible candidate never changes the existing winner.
+
+## Russian shelf-label OCR follow-up
+
+Checked: 2026-10-05
+
+Trigger: physical iPhone validation of candidate `d33616b9` showed the camera and ROI working, but a real Russian promotional shelf label produced no parsed candidate.
+
+Observed label characteristics:
+
+- Cyrillic product text;
+- quantity embedded as `200Г`;
+- current price visually split as large `229` + small `99₽`;
+- smaller previous price `269` + `99`;
+- discount percentage and unrelated integers.
+
+### Apple source check
+
+- VisionKit `text(languages:textContentType:)`:
+  https://developer.apple.com/documentation/visionkit/datascannerviewcontroller/recognizeddatatype/text(languages:textcontenttype:)
+  - language identifiers act as recognition-priority hints;
+  - passing an empty list uses the person's preferred languages;
+  - the scanner still recognizes all supported languages.
+
+- VisionKit — Scanning data with the camera:
+  https://developer.apple.com/documentation/visionkit/scanning-data-with-the-camera
+  - when the expected content includes other languages, pass language identifiers as hints;
+  - use `supportedTextRecognitionLanguages` to discover current support.
+
+### Decision
+
+Keep VisionKit/DataScanner. Do not replace the OCR stack yet.
+
+Change two bounded layers:
+
+1. **OCR language priorities**
+   - build language hints dynamically from the user's preferred languages;
+   - additionally prioritize a supported Russian language identifier and English when available;
+   - never invent an unsupported identifier: hints are selected from `supportedTextRecognitionLanguages`.
+
+2. **Parser / currency**
+   - add `₽`, `RUB`, `РУБ` support everywhere price fragments/currency are parsed;
+   - normalize them to one RUB currency identity;
+   - add a regression fixture with current price `229 + 99₽`, old `269 + 99`, discount text and `200Г`.
+
+### Diagnostic UX
+
+A new `Text found` scan state distinguishes:
+
+- no OCR text seen at all; from
+- OCR text exists but the app still cannot form a supported price + quantity candidate.
+
+This is useful product feedback and also makes future physical OCR failures diagnosable without a debug build.
+
+### Verification
+
+Required:
+
+- fresh simulator and unsigned-device build;
+- fresh parser regression suite;
+- physical retest against the same Russian shelf label;
+- if the app shows `Text found` but never `Label ready`, collect the observed OCR transcripts in a bounded diagnostic follow-up instead of guessing another parser fix.

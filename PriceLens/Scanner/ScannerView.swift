@@ -5,13 +5,42 @@ import VisionKit
 struct ScannerView: UIViewControllerRepresentable {
     let model: ScannerModel
 
+    @MainActor
+    private static var preferredTextLanguages: [String] {
+        let supported = DataScannerViewController
+            .supportedTextRecognitionLanguages
+
+        let preferredCodes = Locale.preferredLanguages.map {
+            String($0.prefix(2)).lowercased()
+        }
+        let desiredCodes = preferredCodes + ["ru", "en"]
+
+        var seen = Set<String>()
+        var result: [String] = []
+
+        for code in desiredCodes {
+            guard let language = supported.first(where: {
+                $0.lowercased().hasPrefix(code)
+            }),
+            seen.insert(language).inserted else {
+                continue
+            }
+
+            result.append(language)
+        }
+
+        return result
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(model: model)
     }
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let scanner = DataScannerViewController(
-            recognizedDataTypes: [.text()],
+            recognizedDataTypes: [
+                .text(languages: Self.preferredTextLanguages)
+            ],
             qualityLevel: .accurate,
             recognizesMultipleItems: true,
             isHighFrameRateTrackingEnabled: true,

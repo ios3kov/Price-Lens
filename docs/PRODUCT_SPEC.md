@@ -50,6 +50,8 @@ Examples:
 - 1,99 €
 - 4.50 KM
 - 4,50 BAM
+- 229,99 ₽ / 229.99 RUB
+- split Russian shelf price such as large `229` + small `99₽`
 - 4 € / € 4
 - 4,- € / 4.–
 - grouped prices such as 1 299,99 / 1.299,99 / 1,299.99
@@ -57,7 +59,7 @@ Examples:
 - separate nearby currency fragments such as `4` + `€`
 - missing decimal separator such as `4 99 €` when currency makes the intent unambiguous
 
-A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Unit-price lines such as `€/kg`, `per 100 g` and `per 100 ml` are not accepted as the package price. Integer-only prices require an adjacent explicit currency; zero-cents notation such as `4,-` is accepted without one. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected. A missing decimal separator is repaired only when currency is explicit on the price item or a nearby currency fragment; bare `4 99` remains rejected.
+A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Supported currency normalization includes EUR/€, USD/$, GBP/£, BAM/KM and RUB/₽. Unit-price lines such as `€/kg`, `per 100 g` and `per 100 ml` are not accepted as the package price. Integer-only prices require an adjacent explicit currency; zero-cents notation such as `4,-` is accepted without one. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected. A missing decimal separator is repaired only when currency is explicit on the price item or a nearby currency fragment; bare `4 99` remains rejected.
 
 ### Mass
 
@@ -220,3 +222,22 @@ Expected:
 - volume item is not added to the mass comparison;
 - no winner changes;
 - UI explains the unit mismatch and offers to start a new comparison.
+
+
+## Real Russian shelf-label acceptance
+
+A Russian promotional shelf label may contain:
+
+- discount text such as `-15%`;
+- an older/smaller price such as `269` + `99`;
+- the current prominent price such as `229` + `99₽`;
+- package quantity embedded in product text such as `200Г`;
+- unrelated card/loyalty/product-code text.
+
+For this format the parser must:
+
+- select the prominent current `229.99 ₽` rather than the smaller old price;
+- parse `200Г` as 0.2 kg;
+- ignore discount percentages and unrelated integers;
+- normalize `₽`, `RUB` and `РУБ` to the same currency;
+- return no candidate rather than guess if price/quantity association is not defensible.

@@ -12,7 +12,8 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 - Working branch: feat/initial-mvp
 - Historical physical candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06` — UX FAIL
 - Last physically launched candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
-- Current multi-item validation candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf`
+- Last physically launched multi-item candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — OCR/parser FAIL on Russian shelf label
+- Next OCR-fix validation candidate: pending commit + fresh CI
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -77,9 +78,24 @@ Replacement candidate `a2d9d9e0`:
 
 This second result changes the product workflow, not just presentation. The simultaneous-two-label model is retired. The new workflow is sequential deliberate capture: **scan one → preview → Add → scan next**, with an in-memory multi-item comparison tray.
 
+## Latest physical OCR finding
+
+Candidate `d33616b9` launched successfully on the physical iPhone, but the real Russian shelf label in the validation screenshot never reached a parsed candidate.
+
+Observed source format included:
+
+- `229` + `99₽` as the current prominent price;
+- smaller `269` + `99` old price;
+- `200Г` package quantity;
+- Cyrillic promotional/discount text.
+
+Root-cause review found that the parser did not support RUB/₽ at all, so common OCR output such as `99₽` could not participate in split-price reconstruction. DataScanner also had no explicit Russian language priority.
+
+The next candidate adds RUB parsing, dynamic preferred/ru/en language hints and a `Text found` diagnostic state.
+
 ## Remaining blocker
 
-The sequential multi-item workflow is **not yet validated on a physical iPhone**.
+The sequential multi-item workflow is **not yet validated on a physical iPhone** after the Russian shelf-label OCR fix.
 
 Next required step: use `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` to build and install exact candidate `d33616b9`, then run the M01–M15 scenarios in `docs/DEVICE_QA.md` using `validation/multi-item-fixtures.html` before real shelf labels.
 
@@ -115,7 +131,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 - Previous physical candidates remain historical FAIL evidence and are not reused as validation of the changed workflow.
 - Physical M01–M15 multi-item scenarios remain NOT_RUN.
 - App Store Release scope remains separate and unauthorized.
-- Current claim: **multi-item implementation and internal pre-handoff verification are complete for d33616b9; physical sequential-capture validation is the next gate.**
+- Current claim: **d33616b9 passed internal checks but failed physical Russian shelf-label OCR; the bounded RUB/language-hint fix requires fresh CI and a same-label physical retest.**
 
 ## Release-only open scope
 
@@ -174,3 +190,26 @@ Source: user physical-device feedback in the active validation session.
 - App Store release.
 
 Fresh tests and physical-device evidence are required because the workflow and production bytes change.
+
+
+## OCR-fix scope — Russian shelf label
+
+Retained:
+
+- sequential multi-item workflow;
+- explicit Add;
+- ComparisonSession;
+- parser safety / no guessed winner;
+- privacy/accessibility contract.
+
+Changed:
+
+- currency support adds `₽`, `RUB`, `РУБ`;
+- scanner text language priorities are selected from actual supported languages, using user preferences plus Russian/English hints;
+- scan state distinguishes no text from unparsed text.
+
+Acceptance:
+
+- synthetic reproduction `229 + 99₽` with old `269 + 99`, `-15%` and `200Г` parses current price as `229.99 ₽` and quantity as 0.2 kg;
+- `₽` and `RUB` compare as the same currency;
+- physical retest of the same Russian label reaches `Label ready` or, if not, at least exposes `Text found` so the next failure is observable rather than silent.

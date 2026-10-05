@@ -288,6 +288,13 @@ struct ContentView: View {
                     : "Point at the next label to add it"
             )
 
+        case .textFound:
+            InstructionCard(
+                symbol: "text.viewfinder",
+                title: "Text found",
+                detail: "Looking for a price and pack size…"
+            )
+
         case .reading:
             if let candidate = scannerModel.currentCandidate {
                 CandidateCard(
@@ -810,7 +817,7 @@ private extension ProductCandidate {
             return amount
         }
 
-        if ["€", "$", "£"].contains(currencyToken) {
+        if ["€", "$", "£", "₽"].contains(currencyToken) {
             return currencyToken + amount
         }
 

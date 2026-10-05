@@ -72,6 +72,13 @@ final class ScannerModel: ObservableObject {
         guard let candidate = candidates.first else {
             missingUpdateCount += 1
 
+            if !items.isEmpty {
+                currentCandidate = nil
+                stabilizer.reset()
+                scanState = .textFound
+                return
+            }
+
             if missingUpdateCount >= 2 {
                 currentCandidate = nil
                 stabilizer.reset()
