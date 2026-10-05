@@ -1236,6 +1236,140 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
     }
 
+    func testParsesOneFractionDigitPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("€4,5", x: 20, y: 20, width: 120, height: 44),
+                    item("500 g", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "4.5"))
+        XCTAssertEqual(candidate.currencyToken, "€")
+    }
+
+    func testParsesThreeFractionCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("KWD 1.250", x: 20, y: 20, width: 150, height: 44),
+                    item("500 g", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "1.250"))
+        XCTAssertEqual(candidate.currencyToken, "KWD")
+    }
+
+    func testParsesScandinavianColonDashZeroCents() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("10:- kr", x: 20, y: 20, width: 140, height: 44),
+                    item("1 kg", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(10))
+    }
+
+    func testParsesBangladeshiTakaSymbol() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("৳125.50", x: 20, y: 20, width: 150, height: 44),
+                    item("1 kg", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "125.50"))
+        XCTAssertEqual(candidate.currencyToken, "৳")
+        XCTAssertEqual(
+            ComparisonEngine.normalizedCurrency(candidate.currencyToken),
+            "BDT"
+        )
+    }
+
+    func testParsesSouthAfricanRandFromSystemLocaleInventory() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("R 49,99", x: 20, y: 20, width: 150, height: 44),
+                    item("500 g", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "49.99"))
+        XCTAssertEqual(
+            ComparisonEngine.normalizedCurrency(candidate.currencyToken),
+            "ZAR"
+        )
+    }
+
+    func testRejectsReferencePricePerPound() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("€4.99/lb", x: 20, y: 20, width: 150, height: 24),
+                item("500 g", x: 20, y: 62, width: 100, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
+    func testAcceptsPerEachAsPackagePrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("$4.99/ea", x: 20, y: 20, width: 150, height: 44),
+                    item("6 ct", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "4.99"))
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(6))
+        XCTAssertEqual(candidate.dimension, .count)
+    }
+
+    func testUsesUSPintForDollarContext() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("$3.99", x: 20, y: 20, width: 120, height: 44),
+                    item("1 pt", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(
+            candidate.normalizedQuantity,
+            Decimal(string: "0.473176473")
+        )
+    }
+
+    func testUsesImperialPintForGBPContext() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("£3.99", x: 20, y: 20, width: 120, height: 44),
+                    item("1 pt", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(
+            candidate.normalizedQuantity,
+            Decimal(string: "0.56826125")
+        )
+    }
+
     func testCandidateExtractorFallsBackToWholeSingleLabelROI() throws {
         let items = [
             item(

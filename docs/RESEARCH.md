@@ -330,3 +330,30 @@ The contract is recorded in `docs/RETAIL_GRAMMAR.md`.
 CLDR describes formatting possibilities, but does not resolve retail semantics such as loyalty eligibility, crossed-out old price or which of two conditional offers applies to the shopper.
 
 Those cases remain subject to geometry/context scoring and the no-guessed-winner ambiguity gate.
+
+
+## Global retail grammar — system locale follow-up
+
+Checked: 2026-10-05
+
+Sources checked:
+
+- Unicode CLDR number and currency patterns:
+  https://cldr.unicode.org/translation/number-currency-formats/number-and-currency-patterns
+- Unicode CLDR detailed currency digits/rounding:
+  https://unicode.org/cldr/charts/49/supplemental/detailed_territory_currency_information.html
+- Apple Foundation `Locale.currency`, `Locale.currencySymbol`, `Locale.availableIdentifiers`:
+  https://developer.apple.com/documentation/foundation/locale/currency-swift.property
+  https://developer.apple.com/documentation/foundation/locale/currencysymbol
+  https://developer.apple.com/documentation/foundation/locale/availableidentifiers
+
+Decision:
+
+- derive the broad currency-symbol inventory from the platform locale/CLDR data instead of maintaining a finite world-symbol table;
+- preserve ambiguous shared symbols rather than guessing a national currency;
+- support CLDR-style one/two-digit prices plus known three-fraction retail currencies;
+- generalize reference-unit detection to every supported mass/volume unit;
+- distinguish per-selling-unit suffixes such as `/ea` from reference mass/volume prices;
+- add customary volume units, using GBP as the deterministic signal for imperial interpretation of bare pint/quart/gallon/fl-oz labels.
+
+Physical OCR validation is still required; this change broadens parser grammar but does not prove every future shelf label.

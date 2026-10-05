@@ -8,8 +8,54 @@ enum RetailLexicon {
     }
 
     private static let isoCurrencyCodes = Set(
-        Locale.commonISOCurrencyCodes.map { $0.uppercased() }
+        Locale.Currency.isoCurrencies.map {
+            $0.identifier.uppercased()
+        }
     )
+
+    /// Currency symbols come from the system CLDR/ICU locale inventory.
+    /// Symbols shared by multiple currencies stay ambiguous instead of being
+    /// silently mapped to one country.
+    private static let localeCurrencySymbolCodes: [String: Set<String>] = {
+        var values: [String: Set<String>] = [:]
+
+        for identifier in Locale.availableIdentifiers {
+            let locale = Locale(identifier: identifier)
+            guard let code = locale.currency?.identifier.uppercased(),
+                  isoCurrencyCodes.contains(code),
+                  let rawSymbol = locale.currencySymbol else {
+                continue
+            }
+
+            let symbol = rawSymbol.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+            guard !symbol.isEmpty,
+                  symbol != "¤",
+                  symbol.uppercased() != code else {
+                continue
+            }
+
+            values[symbol, default: Set<String>()].insert(code)
+        }
+
+        return values
+    }()
+
+    private static let localeCurrencySymbols =
+        localeCurrencySymbolCodes.keys.sorted { lhs, rhs in
+            if lhs.count == rhs.count {
+                return lhs < rhs
+            }
+            return lhs.count > rhs.count
+        }
+
+    /// CLDR/ISO currencies that conventionally use three fractional digits.
+    /// Zero-fraction currencies already work through integer-price parsing.
+    private static let threeFractionCurrencyCodes: Set<String> = [
+        "BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"
+    ]
 
     /// Symbols that are unambiguous enough to canonicalize without a locale.
     /// Ambiguous "$" stays "$" unless it has a regional prefix.
@@ -45,8 +91,21 @@ enum RetailLexicon {
         ("₵", "GHS"),
         ("₭", "LAK"),
         ("₮", "MNT"),
-        ("¥", "JPY"),
-        ("￥", "JPY"),
+        ("؋", "AFN"),
+        ("৳", "BDT"),
+        ("៛", "KHR"),
+        ("د.ك", "KWD"),
+        ("د.ب", "BHD"),
+        ("ر.ق", "QAR"),
+        ("ر.ع.", "OMR"),
+        ("د.ا", "JOD"),
+        ("ج.م", "EGP"),
+        ("ل.ل", "LBP"),
+        ("د.ت", "TND"),
+        ("د.ج", "DZD"),
+        ("د.م.", "MAD"),
+        // Bare yen/yuan is intentionally not canonicalized: ¥ is shared
+        // across JPY/CNY contexts. The display token is preserved instead.
         ("元", "CNY")
     ]
 
@@ -64,6 +123,13 @@ enum RetailLexicon {
         "KM": "BAM",
         "KČ": "CZK",
         "ZŁ": "PLN",
+        "LEI": "RON",
+        "ЛВ": "BGN",
+        "DIN": "RSD",
+        "ДИН": "RSD",
+        "FT": "HUF",
+        "RM": "MYR",
+        "RP": "IDR",
         "KR": "KR"
     ]
 
@@ -108,6 +174,11 @@ enum RetailLexicon {
             multiplier: Decimal(string: "0.000001")!
         )
         add(
+            ["mcg", "ug", "µg", "μg", "мкг"],
+            dimension: .mass,
+            multiplier: Decimal(string: "0.000000001")!
+        )
+        add(
             ["lb", "lbs", "pound", "pounds"],
             dimension: .mass,
             multiplier: Decimal(string: "0.45359237")!
@@ -146,12 +217,72 @@ enum RetailLexicon {
             dimension: .volume,
             multiplier: Decimal(string: "0.001")!
         )
+        add(
+            ["ul", "µl", "μl", "мкл"],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.000001")!
+        )
+        add(
+            ["cc", "cm3"],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.001")!
+        )
+        add(
+            [
+                "fl oz", "floz", "fluid ounce", "fluid ounces",
+                "us fl oz", "us fluid ounce", "us fluid ounces"
+            ],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.0295735295625")!
+        )
+        add(
+            ["imp fl oz", "imperial fl oz", "imperial fluid ounce"],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.0284130625")!
+        )
+        add(
+            ["pt", "pint", "pints", "us pt", "us pint"],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.473176473")!
+        )
+        add(
+            ["imp pt", "imperial pint", "imperial pints"],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.56826125")!
+        )
+        add(
+            ["qt", "quart", "quarts", "us qt", "us quart"],
+            dimension: .volume,
+            multiplier: Decimal(string: "0.946352946")!
+        )
+        add(
+            ["imp qt", "imperial quart", "imperial quarts"],
+            dimension: .volume,
+            multiplier: Decimal(string: "1.1365225")!
+        )
+        add(
+            ["gal", "gallon", "gallons", "us gal", "us gallon"],
+            dimension: .volume,
+            multiplier: Decimal(string: "3.785411784")!
+        )
+        add(
+            ["imp gal", "imperial gallon", "imperial gallons"],
+            dimension: .volume,
+            multiplier: Decimal(string: "4.54609")!
+        )
 
         add(
             [
-                "item", "items", "pc", "pcs", "piece", "pieces",
-                "ea", "each", "ct", "count", "шт", "штук", "ед", "единиц",
-                "个", "個", "件", "개", "قطعة"
+                "item", "items", "unit", "units",
+                "pc", "pcs", "piece", "pieces",
+                "ea", "each", "ct", "count",
+                "pk", "pack", "packs",
+                "шт", "штук", "ед", "единиц",
+                "szt", "ks", "kpl", "stk", "st", "db",
+                "pz", "pezzo", "pezzi",
+                "ud", "uds", "unidad", "unidades",
+                "unité", "unités", "buc",
+                "个", "個", "件", "개", "قطعة", "حبة", "τεμ"
             ],
             dimension: .count,
             multiplier: 1
@@ -160,8 +291,38 @@ enum RetailLexicon {
         return values
     }()
 
+    private static let imperialVolumeOverrides: [String: Decimal] = {
+        var values: [String: Decimal] = [:]
+
+        func add(_ aliases: [String], multiplier: Decimal) {
+            for alias in aliases {
+                values[canonicalWord(alias)] = multiplier
+            }
+        }
+
+        add(
+            ["fl oz", "floz", "fluid ounce", "fluid ounces"],
+            multiplier: Decimal(string: "0.0284130625")!
+        )
+        add(
+            ["pt", "pint", "pints"],
+            multiplier: Decimal(string: "0.56826125")!
+        )
+        add(
+            ["qt", "quart", "quarts"],
+            multiplier: Decimal(string: "1.1365225")!
+        )
+        add(
+            ["gal", "gallon", "gallons"],
+            multiplier: Decimal(string: "4.54609")!
+        )
+
+        return values
+    }()
+
     static var currencyRegexAlternation: String {
         var aliases = symbolCurrencies.map(\.0)
+        aliases.append(contentsOf: localeCurrencySymbols)
         aliases.append("$")
         aliases.append(contentsOf: wordCurrencyAliases.keys)
         aliases.append(contentsOf: isoCurrencyCodes)
@@ -185,6 +346,20 @@ enum RetailLexicon {
         // "$" is intentionally preserved because it can mean many currencies.
         if normalized.contains("$") {
             return "$"
+        }
+
+        for symbol in localeCurrencySymbols
+        where currencySymbolOccurs(symbol, in: normalized) {
+            guard let codes = localeCurrencySymbolCodes[symbol] else {
+                continue
+            }
+
+            if codes.count == 1, let code = codes.first {
+                return code
+            }
+
+            // Preserve shared symbols such as ¥ or kr rather than guessing.
+            return symbol.uppercased()
         }
 
         let words = normalized
@@ -215,7 +390,8 @@ enum RetailLexicon {
         let simpleSymbols = [
             "€", "£", "₽", "₴", "₸", "₺", "₾", "₼",
             "₹", "₩", "₫", "₪", "₱", "฿", "₦", "₡",
-            "₲", "₵", "₭", "₮", "¥", "￥", "元"
+            "₲", "₵", "₭", "₮", "¥", "￥", "元",
+            "؋", "৳", "៛"
         ]
 
         for symbol in simpleSymbols where normalized.contains(symbol) {
@@ -230,6 +406,11 @@ enum RetailLexicon {
 
         if normalized.contains("$") {
             return "$"
+        }
+
+        for symbol in localeCurrencySymbols
+        where currencySymbolOccurs(symbol, in: normalized) {
+            return symbol
         }
 
         let words = normalized
@@ -291,13 +472,43 @@ enum RetailLexicon {
     }
 
     static func unitDefinition(
-        for raw: String
+        for raw: String,
+        currencyHint: String? = nil
     ) -> UnitDefinition? {
-        unitDefinitions[canonicalWord(raw)]
+        let key = canonicalWord(raw)
+
+        if let currencyHint,
+           canonicalCurrency(in: currencyHint) == "GBP",
+           let multiplier = imperialVolumeOverrides[key] {
+            return UnitDefinition(
+                dimension: .volume,
+                multiplier: multiplier
+            )
+        }
+
+        return unitDefinitions[key]
     }
 
     static var unitRegexAlternation: String {
         unitDefinitions.keys
+            .sorted { $0.count > $1.count }
+            .map(NSRegularExpression.escapedPattern(for:))
+            .joined(separator: "|")
+    }
+
+    static var referenceUnitRegexAlternation: String {
+        unitDefinitions
+            .filter { $0.value.dimension != .count }
+            .keys
+            .sorted { $0.count > $1.count }
+            .map(NSRegularExpression.escapedPattern(for:))
+            .joined(separator: "|")
+    }
+
+    static var countUnitRegexAlternation: String {
+        unitDefinitions
+            .filter { $0.value.dimension == .count }
+            .keys
             .sorted { $0.count > $1.count }
             .map(NSRegularExpression.escapedPattern(for:))
             .joined(separator: "|")
@@ -326,6 +537,10 @@ enum RetailLexicon {
             .replacingOccurrences(of: "\u{200E}", with: "")
             .replacingOccurrences(of: "\u{200F}", with: "")
             .replacingOccurrences(of: "\u{061C}", with: "")
+            .replacingOccurrences(of: "\u{2066}", with: "")
+            .replacingOccurrences(of: "\u{2067}", with: "")
+            .replacingOccurrences(of: "\u{2068}", with: "")
+            .replacingOccurrences(of: "\u{2069}", with: "")
             .replacingOccurrences(of: "٫", with: ".")
             .replacingOccurrences(of: "٬", with: ",")
             .replacingOccurrences(of: "−", with: "-")
@@ -361,6 +576,25 @@ enum RetailLexicon {
             }
         }
 
+        // Generic per-selling-unit suffixes are package-price semantics,
+        // not package quantity. Example: $4.99/ea or 10 kr/st.
+        let countSuffixPattern =
+            #"(?i)\s*/\s*(?:"# + countUnitRegexAlternation
+            + #")\.?(?![\p{L}\p{N}])"#
+        if let regex = try? NSRegularExpression(
+            pattern: countSuffixPattern
+        ) {
+            let range = NSRange(
+                normalized.startIndex...,
+                in: normalized
+            )
+            normalized = regex.stringByReplacingMatches(
+                in: normalized,
+                range: range,
+                withTemplate: " "
+            )
+        }
+
         let rubleWordPattern =
             #"(?i)(?<![A-ZА-ЯЁ])(?:руб\.?|rub\.?|р\.)(?![A-ZА-ЯЁ])"#
         if let regex = try? NSRegularExpression(
@@ -389,19 +623,27 @@ enum RetailLexicon {
     static func looksLikeReferenceUnitPrice(
         _ text: String
     ) -> Bool {
-        let compact = normalizeUnicode(text)
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "")
+        let normalized = normalizeUnicode(text).lowercased()
+        let unit = "(?:" + referenceUnitRegexAlternation + ")"
 
         let patterns = [
-            "/kg", "/кг", "/g", "/г",
-            "/l", "/л", "/ml", "/мл",
-            "/100g", "/100г", "/100ml", "/100мл",
-            "perkg", "per100g", "per100ml",
-            "за1кг", "закг", "за100г", "за100мл"
+            #"(?i)/\s*(?:1\s*|10\s*|100\s*|1000\s*)?"#
+                + unit + #"(?![\p{L}\p{N}])"#,
+            #"(?i)(?:\bper\b|\bpro\b|\bpar\b|\bpor\b|\bje\b|за|每|لكل)\s*(?:1\s*|10\s*|100\s*|1000\s*)?"#
+                + unit + #"(?![\p{L}\p{N}])"#,
+            #"(?i)"# + unit + #"\s*당"#
         ]
 
-        return patterns.contains(where: compact.contains)
+        return patterns.contains { pattern in
+            (try? NSRegularExpression(pattern: pattern))?
+                .firstMatch(
+                    in: normalized,
+                    range: NSRange(
+                        normalized.startIndex...,
+                        in: normalized
+                    )
+                ) != nil
+        }
     }
 
     static func looksLikePackagePriceSuffix(
@@ -409,12 +651,55 @@ enum RetailLexicon {
     ) -> Bool {
         let normalized = normalizeUnicode(text)
         let pattern =
-            #"(?i)(?:₽|р\.?|руб\.?|rub\.?)\s*/\s*(?:шт|ед|pc|pcs|ea)\.?"#
+            #"(?i)/\s*(?:"# + countUnitRegexAlternation
+            + #")\.?(?![\p{L}\p{N}])"#
+
         return (try? NSRegularExpression(pattern: pattern))?
             .firstMatch(
                 in: normalized,
                 range: NSRange(normalized.startIndex..., in: normalized)
             ) != nil
+    }
+
+    static func allowsThreeFractionDigits(
+        for currencyToken: String?
+    ) -> Bool {
+        guard let currencyToken,
+              let canonical = canonicalCurrency(in: currencyToken) else {
+            return false
+        }
+
+        return threeFractionCurrencyCodes.contains(canonical)
+    }
+
+    private static func currencySymbolOccurs(
+        _ symbol: String,
+        in text: String
+    ) -> Bool {
+        guard !symbol.isEmpty else {
+            return false
+        }
+
+        var pattern = NSRegularExpression.escapedPattern(for: symbol)
+
+        if let first = symbol.first,
+           first.isLetter || first.isNumber {
+            pattern = #"(?<![\p{L}\p{N}])"# + pattern
+        }
+
+        if let last = symbol.last,
+           last.isLetter || last.isNumber {
+            pattern += #"(?![\p{L}\p{N}])"#
+        }
+
+        return (try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive]
+        ))?
+        .firstMatch(
+            in: text,
+            range: NSRange(text.startIndex..., in: text)
+        ) != nil
     }
 
     private static func canonicalWord(

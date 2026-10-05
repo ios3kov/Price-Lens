@@ -44,9 +44,12 @@ Currency recognition is not limited to a hard-coded country list.
 
 Sources:
 
-- Foundation `Locale.commonISOCurrencyCodes` for ISO currency codes;
-- explicit common currency symbols and regional prefixed symbols;
+- Foundation `Locale.Currency.isoCurrencies` for ISO currency codes;
+- system `Locale.availableIdentifiers` + `currencySymbol` data for localized currency symbols;
+- explicit high-value retail symbols/aliases for OCR stability;
 - bounded retail aliases where OCR commonly emits words/abbreviations.
+
+Symbols shared by multiple currencies (for example bare `$`, `¥`, `kr`) remain ambiguous instead of being silently mapped to one country.
 
 Supported placement classes:
 
@@ -66,7 +69,8 @@ Classes:
 
 - comma decimal;
 - dot decimal;
-- zero-cents forms `4,-`, `4.–`;
+- one-, two- and currency-specific three-fraction prices;
+- zero-cents forms `4,-`, `4.–`, `10:-`;
 - grouped thousands with spaces / NBSP / narrow NBSP;
 - dot/comma grouping;
 - apostrophe grouping;
@@ -92,8 +96,9 @@ Initial broad families include:
 
 - metric mass: kg/g/mg and common Cyrillic/word/script aliases;
 - imperial mass: lb/oz;
-- metric volume: L/dL/cL/mL and script aliases;
-- count: item/pc/pcs/ea/ct/шт/ед and script aliases;
+- metric volume: L/dL/cL/mL/µL/cc and script aliases;
+- US/imperial volume: fl oz, pint, quart, gallon; GBP context selects imperial meaning for bare customary volume units;
+- count: item/pc/pcs/ea/ct plus common European/Asian/Arabic count aliases;
 - multipack forms: `6x330ml`, `6 × 330 ml`, `2х500г`.
 
 Every alias maps to an explicit dimension + multiplier. Unknown units are not guessed.
@@ -105,7 +110,7 @@ Numbers are not automatically prices.
 Reject / down-rank:
 
 - discount percentages;
-- reference unit prices such as `/kg`, `/100 g`, `per kg`;
+- reference unit prices across supported mass/volume units such as `/kg`, `/lb`, `/100 g`, `per kg`, `每公斤`;
 - quantities used as prices;
 - unrelated item/product codes;
 - weak numeric fragments.

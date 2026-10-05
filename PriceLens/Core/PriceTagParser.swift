@@ -24,6 +24,10 @@ enum PriceTagParser {
 
         guard !usable.isEmpty else { return nil }
 
+        let currencyHint = usable.lazy
+            .compactMap { currencyToken(in: $0.transcript) }
+            .first
+
         let prices = usable.compactMap { item in
             priceMatch(
                 item,
@@ -33,7 +37,12 @@ enum PriceTagParser {
                 )
             )
         } + splitPriceMatches(in: usable)
-        let quantities = usable.compactMap(quantityMatch)
+        let quantities = usable.compactMap {
+            quantityMatch(
+                $0,
+                currencyHint: currencyHint
+            )
+        }
 
         let pairs = prices.flatMap { price in
             quantities.compactMap { quantity -> (PriceMatch, QuantityMatch, Double)? in
@@ -148,11 +157,18 @@ enum PriceTagParser {
         let currencyPattern =
             "(?:" + RetailLexicon.currencyRegexAlternation + ")"
 
+        let threeFractionDigits =
+            RetailLexicon.allowsThreeFractionDigits(
+                for: currency
+            )
+        let maxFractionDigits = threeFractionDigits ? 3 : 2
+
         // CLDR permits the currency symbol before, after, or in the decimal
         // position (for example 12€50).
         let currencyAsDecimalPattern =
             #"(?i)(?<!\d)(\d{1,9})\s*"# + currencyPattern
-            + #"\s*(\d{2})(?!\d)"#
+            + #"\s*(\d{1,"# + String(maxFractionDigits)
+            + #"})(?!\d)"#
 
         if let match = firstMatch(
             pattern: currencyAsDecimalPattern,
@@ -163,7 +179,7 @@ enum PriceTagParser {
             group: 1,
             text: text
            ),
-           let centsRaw = capturedString(
+           let fractionRaw = capturedString(
             match,
             group: 2,
             text: text
@@ -172,20 +188,28 @@ enum PriceTagParser {
             string: wholeRaw,
             locale: Locale(identifier: "en_US_POSIX")
            ),
-           let cents = Decimal(
-            string: centsRaw,
-            locale: Locale(identifier: "en_US_POSIX")
-           ) {
-            return whole + (cents / 100)
+           let fraction = fractionalDecimal(fractionRaw) {
+            return whole + fraction
         }
 
         // Accept Western, Indian and apostrophe/space grouping styles.
-        let groupedDecimalPattern =
-            #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+[\.,]\d{2})(?!\d)"#
-        let decimalPattern =
-            #"(?<!\d)(\d{1,9}[\.,]\d{2})(?!\d)"#
+        var decimalPatterns = [
+            #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+[\.,]\d{1,2})(?!\d)"#,
+            #"(?<!\d)(\d{1,9}[\.,]\d{1,2})(?!\d)"#
+        ]
 
-        for pattern in [groupedDecimalPattern, decimalPattern] {
+        if threeFractionDigits {
+            decimalPatterns.insert(
+                #"(?<!\d)(\d{1,9}[\.,]\d{3})(?!\d)"#,
+                at: 0
+            )
+            decimalPatterns.insert(
+                #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+[\.,]\d{3})(?!\d)"#,
+                at: 0
+            )
+        }
+
+        for pattern in decimalPatterns {
             if let match = firstMatch(pattern: pattern, in: text),
                let raw = capturedString(match, group: 1, text: text),
                let value = decimal(raw) {
@@ -195,9 +219,9 @@ enum PriceTagParser {
 
         // Common European zero-cents notation: 4,- / 4.- / 4.–
         let groupedZeroCentsPattern =
-            #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+)\s*[\.,]\s*-(?!\d)"#
+            #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+)\s*[\.,:]\s*-(?!\d)"#
         let zeroCentsPattern =
-            #"(?<!\d)(\d{1,9})\s*[\.,]\s*-(?!\d)"#
+            #"(?<!\d)(\d{1,9})\s*[\.,:]\s*-(?!\d)"#
 
         for pattern in [groupedZeroCentsPattern, zeroCentsPattern] {
             if let match = firstMatch(pattern: pattern, in: text),
@@ -211,7 +235,8 @@ enum PriceTagParser {
         // Only repair that form when a currency marker disambiguates it.
         if currency != nil {
             let missingSeparatorPattern =
-                #"(?<!\d)(\d{1,9})\s+(\d{2})(?!\d)"#
+                #"(?<!\d)(\d{1,9})\s+(\d{1,"#
+                + String(maxFractionDigits) + #"})(?!\d)"#
             if let match = firstMatch(
                 pattern: missingSeparatorPattern,
                 in: text
@@ -221,7 +246,7 @@ enum PriceTagParser {
                 group: 1,
                 text: text
                ),
-               let centsRaw = capturedString(
+               let fractionRaw = capturedString(
                 match,
                 group: 2,
                 text: text
@@ -230,11 +255,8 @@ enum PriceTagParser {
                 string: wholeRaw,
                 locale: Locale(identifier: "en_US_POSIX")
                ),
-               let cents = Decimal(
-                string: centsRaw,
-                locale: Locale(identifier: "en_US_POSIX")
-               ) {
-                return whole + (cents / 100)
+               let fraction = fractionalDecimal(fractionRaw) {
+                return whole + fraction
             }
         }
 
@@ -451,7 +473,10 @@ enum PriceTagParser {
         )
     }
 
-    private static func quantityMatch(_ item: ScannedText) -> QuantityMatch? {
+    private static func quantityMatch(
+        _ item: ScannedText,
+        currencyHint: String?
+    ) -> QuantityMatch? {
         let text = RetailLexicon.normalizeUnicode(item.transcript)
         let lower = text.lowercased()
 
@@ -472,7 +497,11 @@ enum PriceTagParser {
            let sizeRaw = capturedString(match, group: 2, text: text),
            let unit = capturedString(match, group: 3, text: text),
            let size = quantityDecimal(sizeRaw, unit: unit),
-           let normalized = normalize(value: count * size, unit: unit) {
+           let normalized = normalize(
+            value: count * size,
+            unit: unit,
+            currencyHint: currencyHint
+           ) {
             return QuantityMatch(
                 normalizedValue: normalized.value,
                 dimension: normalized.dimension,
@@ -486,7 +515,11 @@ enum PriceTagParser {
               let valueRaw = capturedString(match, group: 1, text: text),
               let unit = capturedString(match, group: 2, text: text),
               let value = quantityDecimal(valueRaw, unit: unit),
-              let normalized = normalize(value: value, unit: unit) else {
+              let normalized = normalize(
+                value: value,
+                unit: unit,
+                currencyHint: currencyHint
+              ) else {
             return nil
         }
 
@@ -548,10 +581,12 @@ enum PriceTagParser {
 
     private static func normalize(
         value: Decimal,
-        unit rawUnit: String
+        unit rawUnit: String,
+        currencyHint: String?
     ) -> (value: Decimal, dimension: QuantityDimension)? {
         guard let definition = RetailLexicon.unitDefinition(
-            for: rawUnit
+            for: rawUnit,
+            currencyHint: currencyHint
         ) else {
             return nil
         }
@@ -665,6 +700,25 @@ enum PriceTagParser {
             return nil
         }
         return decimal(string)
+    }
+
+    private static func fractionalDecimal(
+        _ raw: String
+    ) -> Decimal? {
+        guard !raw.isEmpty,
+              let value = Decimal(
+                string: raw,
+                locale: Locale(identifier: "en_US_POSIX")
+              ) else {
+            return nil
+        }
+
+        var divisor = Decimal(1)
+        for _ in raw {
+            divisor *= 10
+        }
+
+        return value / divisor
     }
 
     private static func integerWithGrouping(
