@@ -7,19 +7,42 @@ on:
       - "feat/**"
   pull_request:
 
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: macos-15
+    timeout-minutes: 20
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Show toolchain
-        run: xcodebuild -version
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available
 
       - name: Build
         run: |
-          xcodebuild             -project PriceLens.xcodeproj             -scheme PriceLens             -sdk iphonesimulator             -destination 'generic/platform=iOS Simulator'             CODE_SIGNING_ALLOWED=NO             build
+          set -euo pipefail
+          xcodebuild \
+            -project PriceLens.xcodeproj \
+            -scheme PriceLens \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
       - name: Unit tests
         run: |
-          xcodebuild             -project PriceLens.xcodeproj             -scheme PriceLens             -destination 'platform=iOS Simulator,name=iPhone 16 Pro'             CODE_SIGNING_ALLOWED=NO             test
+          set -euo pipefail
+          xcodebuild \
+            -project PriceLens.xcodeproj \
+            -scheme PriceLens \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+            -parallel-testing-enabled NO \
+            -maximum-concurrent-test-simulator-destinations 1 \
+            CODE_SIGNING_ALLOWED=NO \
+            test
