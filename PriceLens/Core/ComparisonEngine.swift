@@ -49,16 +49,12 @@ enum ComparisonEngine {
     }
 
     static func normalizedCurrency(_ token: String?) -> String? {
-        guard let token else { return nil }
-        let upper = token.uppercased()
-        switch upper {
-        case "€", "EUR": return "EUR"
-        case "$", "USD": return "USD"
-        case "£", "GBP": return "GBP"
-        case "₽", "RUB", "РУБ": return "RUB"
-        case "KM", "BAM": return "BAM"
-        default: return upper
+        guard let token else {
+            return nil
         }
+
+        return RetailLexicon.canonicalCurrency(in: token)
+            ?? token.uppercased()
     }
 
     private static func minDecimal(_ lhs: Decimal, _ rhs: Decimal) -> Decimal {

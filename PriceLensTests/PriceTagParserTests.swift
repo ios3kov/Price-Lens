@@ -986,6 +986,169 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(comparison.winner, .right)
     }
 
+    func testUniversalCurrencyLexiconRecognizesCommonGlobalForms() {
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "€ 4,99"), "EUR")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "R$ 12,90"), "BRL")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "₹99"), "INR")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "₴ 120"), "UAH")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "₸ 999"), "KZT")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "CHF 4.95"), "CHF")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "PLN 9,99"), "PLN")
+        XCTAssertEqual(RetailLexicon.canonicalCurrency(in: "229 руб."), "RUB")
+    }
+
+    func testParsesBrazilianRealPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("R$ 12,90", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "12.90"))
+        XCTAssertEqual(candidate.currencyToken, "BRL")
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
+    }
+
+    func testParsesSwissFrancPriceByISOCode() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("CHF 4.95", x: 20, y: 20, height: 44),
+                    item("250 g", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "4.95"))
+        XCTAssertEqual(candidate.currencyToken, "CHF")
+    }
+
+    func testParsesIndianRupeeIntegerPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("₹99", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(99))
+        XCTAssertEqual(candidate.currencyToken, "₹")
+    }
+
+    func testParsesRussianPerItemSplitPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("СМЕТАНА ПРОСТОКВАШИНО", x: 20, y: 10, width: 240, height: 24),
+                    item("315г", x: 20, y: 40, width: 72, height: 22),
+                    item("78", x: 315, y: 14, width: 42, height: 24),
+                    item("99", x: 360, y: 18, width: 22, height: 14),
+                    item("56", x: 165, y: 84, width: 120, height: 88),
+                    item("99 р/шт.", x: 290, y: 105, width: 96, height: 34)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "56.99"))
+        XCTAssertEqual(candidate.currencyToken, "₽")
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.315"))
+        XCTAssertEqual(candidate.dimension, .mass)
+    }
+
+    func testParsesPoundsAndOuncesToKilograms() throws {
+        let pound = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("$4.99", x: 20, y: 20, height: 44),
+                    item("1 lb", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+        let ounces = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("$4.99", x: 20, y: 20, height: 44),
+                    item("16 oz", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(
+            pound.normalizedQuantity,
+            Decimal(string: "0.45359237")
+        )
+        XCTAssertEqual(
+            ounces.normalizedQuantity,
+            Decimal(string: "0.45359237")
+        )
+    }
+
+    func testParsesDecilitersAndCountAliases() throws {
+        let volume = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("€1.99", x: 20, y: 20, height: 44),
+                    item("5 dl", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+        let count = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("$2.99", x: 20, y: 20, height: 44),
+                    item("6 ea", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(volume.normalizedQuantity, Decimal(string: "0.5"))
+        XCTAssertEqual(volume.dimension, .volume)
+        XCTAssertEqual(count.normalizedQuantity, Decimal(6))
+        XCTAssertEqual(count.dimension, .count)
+    }
+
+    func testUnicodeMultipackNormalization() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("€3.99", x: 20, y: 20, height: 44),
+                    item("2×500 мл", x: 20, y: 72, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(1))
+        XCTAssertEqual(candidate.dimension, .volume)
+    }
+
+    func testRejectsReferenceUnitPriceInRussian() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("1149 ₽/кг", x: 20, y: 20, height: 22),
+                item("315 г", x: 20, y: 58, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
+    func testRejectsAmbiguousSimilarPromotionalPrices() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("€4.99", x: 20, y: 20, width: 100, height: 42),
+                item("€5.09", x: 140, y: 20, width: 100, height: 42),
+                item("500 g", x: 20, y: 78, width: 100, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
     func testComparisonSessionAddsAndRanksMultipleItems() {
         var session = ComparisonSession()
 

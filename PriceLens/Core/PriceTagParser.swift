@@ -49,7 +49,20 @@ enum PriceTagParser {
             }
         }
 
-        guard let bestPair = pairs.max(by: { $0.2 < $1.2 }) else {
+        let rankedPairs = pairs.sorted { $0.2 > $1.2 }
+
+        guard let bestPair = rankedPairs.first else {
+            return nil
+        }
+
+        // Do not guess when two materially different interpretations are
+        // almost equally plausible. This is common on loyalty/promo labels.
+        if let competitor = rankedPairs.dropFirst().first(where: {
+            $0.0.value != bestPair.0.value ||
+            $0.1.normalizedValue != bestPair.1.normalizedValue ||
+            $0.1.dimension != bestPair.1.dimension
+        }),
+           bestPair.2 - competitor.2 < 0.45 {
             return nil
         }
 
@@ -86,10 +99,14 @@ enum PriceTagParser {
         inheritedCurrency: String? = nil
     ) -> PriceMatch? {
         let text = item.transcript
+        let normalizedPriceText = RetailLexicon.normalizePriceText(text)
         let directCurrency = currencyToken(in: text)
         let currency = directCurrency ?? inheritedCurrency
 
-        guard let value = priceValue(in: text, currency: currency) else {
+        guard let value = priceValue(
+            in: normalizedPriceText,
+            currency: currency
+        ) else {
             return nil
         }
 
@@ -100,7 +117,7 @@ enum PriceTagParser {
 
         // Unit-price lines are reference prices, not the package price.
         // Never allow them to win just because they also contain a currency.
-        if containsUnitPriceCue(lower) {
+        if RetailLexicon.looksLikeReferenceUnitPrice(lower) {
             return nil
         }
 
@@ -206,7 +223,8 @@ enum PriceTagParser {
             return value
         }
 
-        let currencyPattern = #"(?:€|\$|£|₽|EUR|USD|GBP|BAM|KM|RUB|РУБ)"#
+        let currencyPattern =
+            "(?:" + RetailLexicon.currencyRegexAlternation + ")"
         let groupedNumber = #"(\d{1,3}(?:[\s\.,]\d{3})+)"#
         let groupedPrefixed = #"(?i)"# + currencyPattern + #"\s*"# + groupedNumber
         let groupedSuffixed = #"(?i)(?<!\d)"# + groupedNumber + #"\s*"# + currencyPattern
@@ -239,18 +257,29 @@ enum PriceTagParser {
         in items: [ScannedText]
     ) -> [PriceMatch] {
         let wholeCandidates = items.compactMap { item -> (ScannedText, Decimal)? in
-            guard !containsUnitPriceCue(item.transcript.lowercased()),
-                  !containsAnySupportedUnit(item.transcript.lowercased()),
-                  let value = plainIntegerValue(in: item.transcript, digits: 1...4) else {
+            let lower = item.transcript.lowercased()
+            guard !RetailLexicon.looksLikeReferenceUnitPrice(lower),
+                  !containsAnySupportedUnit(lower),
+                  let value = plainIntegerValue(
+                    in: item.transcript,
+                    digits: 1...4
+                  ) else {
                 return nil
             }
             return (item, value)
         }
 
         let fractionCandidates = items.compactMap { item -> (ScannedText, Decimal)? in
-            guard !containsUnitPriceCue(item.transcript.lowercased()),
-                  !containsAnySupportedUnit(item.transcript.lowercased()),
-                  let value = plainIntegerValue(in: item.transcript, digits: 2...2) else {
+            let lower = item.transcript.lowercased()
+            let packagePriceSuffix =
+                RetailLexicon.looksLikePackagePriceSuffix(lower)
+
+            guard !RetailLexicon.looksLikeReferenceUnitPrice(lower),
+                  (!containsAnySupportedUnit(lower) || packagePriceSuffix),
+                  let value = plainIntegerValue(
+                    in: item.transcript,
+                    digits: 2...2
+                  ) else {
                 return nil
             }
             return (item, value)
@@ -348,13 +377,22 @@ enum PriceTagParser {
         in text: String,
         digits: ClosedRange<Int>
     ) -> Decimal? {
-        let currency = #"(?:€|\$|£|₽|EUR|USD|GBP|BAM|KM|RUB|РУБ)?"#
+        let normalized = RetailLexicon.normalizePriceText(text)
+        let currency =
+            "(?:" + RetailLexicon.currencyRegexAlternation + ")?"
         let pattern = #"(?i)^\s*"# + currency + #"\s*(\d{"#
             + String(digits.lowerBound) + #","# + String(digits.upperBound)
             + #"})\s*"# + currency + #"\s*$"#
 
-        guard let match = firstMatch(pattern: pattern, in: text),
-              let raw = capturedString(match, group: 1, text: text) else {
+        guard let match = firstMatch(
+            pattern: pattern,
+            in: normalized
+        ),
+              let raw = capturedString(
+                match,
+                group: 1,
+                text: normalized
+              ) else {
             return nil
         }
 
@@ -365,17 +403,20 @@ enum PriceTagParser {
     }
 
     private static func quantityMatch(_ item: ScannedText) -> QuantityMatch? {
-        let text = item.transcript
+        let text = RetailLexicon.normalizeUnicode(item.transcript)
         let lower = text.lowercased()
 
-        if containsUnitPriceCue(lower) {
+        if RetailLexicon.looksLikeReferenceUnitPrice(lower) {
             return nil
         }
 
-        let numberPattern = #"(?<![\d\.,])(\d{1,3}(?:\s\d{3})+(?:[\.,]\d+)?|\d+(?:[\.,]\d+)?)"#
-        let unitPattern = #"(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
+        let numberPattern =
+            #"(?<![\d\.,])(\d{1,3}(?:\s\d{3})+(?:[\.,]\d+)?|\d+(?:[\.,]\d+)?)"#
+        let unitPattern =
+            "(" + RetailLexicon.unitRegexAlternation + ")"
 
-        let multipackPattern = #"(?i)(\d{1,3})\s*[xх×]\s*"# + numberPattern + #"\s*"# + unitPattern
+        let multipackPattern =
+            #"(?i)(\d{1,3})\s*x\s*"# + numberPattern + #"\s*"# + unitPattern
         if let match = firstMatch(pattern: multipackPattern, in: text),
            let count = capturedDecimal(match, group: 1, text: text),
            let sizeRaw = capturedString(match, group: 2, text: text),
@@ -459,53 +500,30 @@ enum PriceTagParser {
         value: Decimal,
         unit rawUnit: String
     ) -> (value: Decimal, dimension: QuantityDimension)? {
-        let unit = rawUnit.lowercased()
-
-        switch unit {
-        case "kg", "кг":
-            return (value, .mass)
-        case "g", "gr", "гр", "г":
-            return (value / 1000, .mass)
-        case "l", "л":
-            return (value, .volume)
-        case "ml", "мл":
-            return (value / 1000, .volume)
-        case "cl":
-            return (value / 100, .volume)
-        case "item", "items", "pc", "pcs", "шт":
-            return (value, .count)
-        default:
+        guard let definition = RetailLexicon.unitDefinition(
+            for: rawUnit
+        ) else {
             return nil
         }
+
+        return (
+            value * definition.multiplier,
+            definition.dimension
+        )
     }
 
-    private static func containsUnitPriceCue(_ text: String) -> Bool {
-        let compact = text
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "\u{00A0}", with: "")
-            .replacingOccurrences(of: "\u{202F}", with: "")
+    private static func containsAnySupportedUnit(
+        _ text: String
+    ) -> Bool {
+        let pattern =
+            #"(?i)(?<![\p{L}\p{N}])(?:"
+            + RetailLexicon.unitRegexAlternation
+            + #")(?![\p{L}\p{N}])"#
 
-        return compact.contains("/kg") ||
-            compact.contains("/кг") ||
-            compact.contains("/l") ||
-            compact.contains("/л") ||
-            compact.contains("/100g") ||
-            compact.contains("/100ml") ||
-            compact.contains("per100g") ||
-            compact.contains("per100ml") ||
-            compact.contains("za100g") ||
-            compact.contains("za100ml") ||
-            text.contains("per kg") ||
-            text.contains("per l") ||
-            text.contains("per item") ||
-            text.contains("per pc") ||
-            text.contains("za kg") ||
-            text.contains("za 1 kg")
-    }
-
-    private static func containsAnySupportedUnit(_ text: String) -> Bool {
-        ["kg", "кг", " ml", "мл", " cl", " l", " л", " g", "гр", " г", "item", "pc", "pcs", "шт"]
-            .contains(where: text.contains)
+        return firstMatch(
+            pattern: pattern,
+            in: RetailLexicon.normalizeUnicode(text)
+        ) != nil
     }
 
     private static func nearbyCurrencyToken(
@@ -540,33 +558,38 @@ enum PriceTagParser {
     private static func standaloneCurrencyToken(
         in text: String
     ) -> String? {
-        let pattern = #"(?i)^\s*(€|\$|£|₽|EUR|USD|GBP|BAM|KM|RUB|РУБ)\s*$"#
-        guard let match = firstMatch(pattern: pattern, in: text),
-              let token = capturedString(
-                match,
-                group: 1,
-                text: text
+        let normalized = RetailLexicon.normalizePriceText(text)
+        let pattern =
+            #"(?i)^\s*(?:"# + RetailLexicon.currencyRegexAlternation
+            + #")\s*$"#
+
+        guard firstMatch(
+            pattern: pattern,
+            in: normalized
+        ) != nil,
+              let canonical = RetailLexicon.canonicalCurrency(
+                in: normalized
               ) else {
             return nil
         }
 
-        return ["€", "$", "£", "₽"].contains(token)
-            ? token
-            : token.uppercased()
+        return RetailLexicon.displayCurrency(
+            canonical: canonical
+        )
     }
 
-    private static func currencyToken(in text: String) -> String? {
-        for symbol in ["€", "$", "£", "₽"] where text.contains(symbol) {
-            return symbol
-        }
-
-        let pattern = #"(?i)(?<![A-ZА-Я])(BAM|EUR|USD|GBP|KM|RUB|РУБ)(?![A-ZА-Я])"#
-        guard let match = firstMatch(pattern: pattern, in: text),
-              let token = capturedString(match, group: 1, text: text) else {
+    private static func currencyToken(
+        in text: String
+    ) -> String? {
+        guard let canonical = RetailLexicon.canonicalCurrency(
+            in: RetailLexicon.normalizePriceText(text)
+        ) else {
             return nil
         }
 
-        return token.uppercased()
+        return RetailLexicon.displayCurrency(
+            canonical: canonical
+        )
     }
 
     private static func firstMatch(
@@ -608,10 +631,8 @@ enum PriceTagParser {
     private static func integerWithGrouping(
         _ raw: String
     ) -> Decimal? {
-        let normalized = raw
+        let normalized = RetailLexicon.normalizeUnicode(raw)
             .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "\u{00A0}", with: "")
-            .replacingOccurrences(of: "\u{202F}", with: "")
             .replacingOccurrences(of: ".", with: "")
             .replacingOccurrences(of: ",", with: "")
 
@@ -622,10 +643,8 @@ enum PriceTagParser {
     }
 
     private static func decimal(_ raw: String) -> Decimal? {
-        var value = raw
+        var value = RetailLexicon.normalizeUnicode(raw)
             .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "\u{00A0}", with: "")
-            .replacingOccurrences(of: "\u{202F}", with: "")
 
         if value.contains(","), value.contains(".") {
             let comma = value.lastIndex(of: ",")

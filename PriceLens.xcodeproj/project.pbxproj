@@ -16,6 +16,7 @@
 		B10000000000000000000007 /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000007 /* ScannerView.swift */; };
 		B10000000000000000000008 /* PriceTagParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000008 /* PriceTagParserTests.swift */; };
 		B10000000000000000000009 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000C /* PrivacyInfo.xcprivacy */; };
+		B1000000000000000000000A /* RetailLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000D /* RetailLexicon.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +42,7 @@
 		C1000000000000000000000A /* PriceLens.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PriceLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000000B /* PriceLensTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PriceLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000000C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C1000000000000000000000D /* RetailLexicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailLexicon.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +91,7 @@
 				C10000000000000000000003 /* Models.swift */,
 				C10000000000000000000004 /* ComparisonEngine.swift */,
 				C10000000000000000000005 /* PriceTagParser.swift */,
+				C1000000000000000000000D /* RetailLexicon.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -223,6 +226,7 @@
 				B10000000000000000000003 /* Models.swift in Sources */,
 				B10000000000000000000004 /* ComparisonEngine.swift in Sources */,
 				B10000000000000000000005 /* PriceTagParser.swift in Sources */,
+				B1000000000000000000000A /* RetailLexicon.swift in Sources */,
 				B10000000000000000000006 /* ScannerModel.swift in Sources */,
 				B10000000000000000000007 /* ScannerView.swift in Sources */,
 			);
