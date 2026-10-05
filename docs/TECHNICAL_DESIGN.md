@@ -26,6 +26,7 @@ The app is split into four boundaries:
 2. **Tag grouping**
    - Groups nearby recognized text into candidate shelf labels using geometry.
    - If nearby labels collapse into one connected cluster, the fallback tests both horizontal and vertical largest-gap splits.
+   - Validated splits are applied recursively, so a 3+ tag mega-cluster remains 3+ candidates and reaches the ambiguity guard instead of silently becoming two.
    - A fallback split is accepted only when both halves independently parse as valid price + quantity candidates.
    - Semantic duplicates are collapsed only when they are close on both X and Y axes; identical products in separate shelf positions remain distinct candidates.
    - Camera framework types do not leak into parsing logic.

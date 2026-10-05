@@ -531,6 +531,54 @@ final class PriceTagParserTests: XCTestCase {
         }
     }
 
+    func testClustererRecursivelySeparatesThreeMergedTags() {
+        let items = [
+            item("1.99", x: 10, y: 20, width: 80, height: 38),
+            item("250 g", x: 10, y: 64, width: 80, height: 22),
+
+            item("2.99", x: 105, y: 20, width: 80, height: 38),
+            item("500 g", x: 105, y: 64, width: 80, height: 22),
+
+            item("4.99", x: 200, y: 20, width: 80, height: 38),
+            item("1 kg", x: 200, y: 64, width: 80, height: 22)
+        ]
+
+        let clusters = TagClusterer.clusters(from: items)
+        let candidates = clusters.compactMap(PriceTagParser.parse(cluster:))
+
+        XCTAssertEqual(clusters.count, 3)
+        XCTAssertEqual(candidates.count, 3)
+
+        let prices = Set(
+            candidates.map {
+                NSDecimalNumber(decimal: $0.price).stringValue
+            }
+        )
+        XCTAssertEqual(prices, Set(["1.99", "2.99", "4.99"]))
+    }
+
+    func testClustererRecursivelySeparatesFourMergedTags() {
+        let items = [
+            item("1.99", x: 10, y: 20, width: 72, height: 38),
+            item("250 g", x: 10, y: 64, width: 72, height: 22),
+
+            item("2.99", x: 92, y: 20, width: 72, height: 38),
+            item("500 g", x: 92, y: 64, width: 72, height: 22),
+
+            item("3.99", x: 174, y: 20, width: 72, height: 38),
+            item("750 g", x: 174, y: 64, width: 72, height: 22),
+
+            item("4.99", x: 256, y: 20, width: 72, height: 38),
+            item("1 kg", x: 256, y: 64, width: 72, height: 22)
+        ]
+
+        let clusters = TagClusterer.clusters(from: items)
+        let candidates = clusters.compactMap(PriceTagParser.parse(cluster:))
+
+        XCTAssertEqual(clusters.count, 4)
+        XCTAssertEqual(candidates.count, 4)
+    }
+
     func testClustererKeepsTwoNearbyTagsSeparate() {
         let items = [
             item("4.99", x: 20, y: 20, height: 40),

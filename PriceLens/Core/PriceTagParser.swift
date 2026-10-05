@@ -472,15 +472,19 @@ enum TagClusterer {
             result.append(cluster)
         }
 
-        if result.count == 1,
-           let split = splitMixedCluster(usable) {
-            // Prefer a validated spatial split over a mixed mega-cluster.
-            // Both halves must independently parse as real price-tag candidates,
-            // otherwise keeping the original cluster is safer than guessing.
-            return split
+        return result.flatMap(refineCluster)
+    }
+
+    private static func refineCluster(
+        _ items: [ScannedText]
+    ) -> [[ScannedText]] {
+        guard let split = splitMixedCluster(items) else {
+            return [items]
         }
 
-        return result
+        // Recurse so a connected mega-cluster containing 3+ shelf tags does
+        // not get flattened into only two candidates.
+        return split.flatMap(refineCluster)
     }
 
     private static func shouldJoin(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
