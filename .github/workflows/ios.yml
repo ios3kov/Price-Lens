@@ -38,13 +38,45 @@ jobs:
       - name: Build iPhone device target
         run: |
           set -euo pipefail
+          rm -rf "$RUNNER_TEMP/PriceLensDeviceBuild"
           xcodebuild \
             -project PriceLens.xcodeproj \
             -scheme PriceLens \
+            -configuration Debug \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/PriceLensDeviceBuild" \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Verify device bundle identity and privacy manifest
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/PriceLensDeviceBuild/Build/Products/Debug-iphoneos/PriceLens.app"
+          INFO="$APP/Info.plist"
+          PRIVACY="$APP/PrivacyInfo.xcprivacy"
+
+          test -d "$APP"
+          test -f "$INFO"
+          test -f "$PRIVACY"
+          plutil -lint "$PRIVACY"
+
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INFO")
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO")
+          BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO")
+          CATEGORY=$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPIType' "$PRIVACY")
+          REASON=$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPITypeReasons:0' "$PRIVACY")
+          TRACKING=$(/usr/libexec/PlistBuddy -c 'Print :NSPrivacyTracking' "$PRIVACY")
+
+          test "$BUNDLE_ID" = "com.os3kov.PriceLens"
+          test "$VERSION" = "0.1.0"
+          test "$BUILD" = "1"
+          test "$CATEGORY" = "NSPrivacyAccessedAPICategorySystemBootTime"
+          test "$REASON" = "35F9.1"
+          test "$TRACKING" = "false"
+
+          echo "Verified bundle: $BUNDLE_ID $VERSION ($BUILD)"
+          echo "Verified privacy reason: $CATEGORY / $REASON"
 
       - name: Unit test core
         run: |

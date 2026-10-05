@@ -15,6 +15,7 @@
 		B10000000000000000000006 /* ScannerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000006 /* ScannerModel.swift */; };
 		B10000000000000000000007 /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000007 /* ScannerView.swift */; };
 		B10000000000000000000008 /* PriceTagParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000008 /* PriceTagParserTests.swift */; };
+		B10000000000000000000009 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C1000000000000000000000C /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,6 +40,7 @@
 		C10000000000000000000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C1000000000000000000000A /* PriceLens.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PriceLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000000B /* PriceLensTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PriceLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1000000000000000000000C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +78,7 @@
 				F10000000000000000000003 /* Core */,
 				F10000000000000000000004 /* Scanner */,
 				C10000000000000000000009 /* Info.plist */,
+				C1000000000000000000000C /* PrivacyInfo.xcprivacy */,
 			);
 			path = PriceLens;
 			sourceTree = "<group>";
@@ -197,6 +200,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B10000000000000000000009 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

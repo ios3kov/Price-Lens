@@ -269,6 +269,8 @@ private struct ScanRegionGuide: View {
 }
 
 private struct CandidateFrame: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     let label: String
     let bounds: CGRect
 
@@ -292,7 +294,10 @@ private struct CandidateFrame: View {
             height: max(44, expanded.height)
         )
         .position(x: expanded.midX, y: expanded.midY)
-        .animation(.easeOut(duration: 0.12), value: bounds)
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.12),
+            value: bounds
+        )
     }
 }
 
@@ -326,6 +331,10 @@ private struct ResultCard: View {
         .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 24))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(comparison.headline)
+        .accessibilityValue(
+            "A \(comparison.formattedUnitPrice(comparison.left.unitPrice)) per \(comparison.unitLabel), " +
+            "B \(comparison.formattedUnitPrice(comparison.right.unitPrice)) per \(comparison.unitLabel)"
+        )
     }
 
     private func priceColumn(
