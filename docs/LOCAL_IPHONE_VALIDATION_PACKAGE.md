@@ -2,13 +2,13 @@
 
 ## Exact candidate
 
-- Source commit to build: `7a25dbceb00926a868c5686934c3059e0269e932`
+- Source commit to build: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf`
 - Bundle ID: `com.os3kov.PriceLens`
 - Version/build: `0.1.0 (1)`
 - Channel: local Xcode signed install
 - Standard: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 
-This candidate keeps the sequential multi-item workflow and replaces `d33616b9` because the physical Russian shelf-label test failed to recognize `229 + 99₽ / 200Г`. Do not build from a different production-source commit and call it the same candidate.
+This candidate replaces the bounded RUB parser with the generalized retail grammar after physical evidence showed another valid Russian form (`56 + 99 р/шт.`). Do not build from a different production-source commit and call it the same candidate.
 
 ## Local preparation
 
@@ -16,7 +16,7 @@ From the existing local repository or a clean clone:
 
 ```bash
 git fetch origin
-git checkout 7a25dbceb00926a868c5686934c3059e0269e932
+git checkout d76107bb1389a215eddba03d2bbdbd8efea9c9bf
 git status --short
 git rev-parse HEAD
 xcodebuild -version
@@ -41,7 +41,14 @@ Changing Team for local signing is an environment/signing input; do not commit a
 
 ## Test data
 
-First retest the Russian RUB failure:
+First retest both previously failing Russian label classes:
+
+1. the original physical `229 + 99₽ / 200Г` label (or `validation/russian-ruble-fixture.html`);
+2. the physical `56 + 99 р/шт. / 315г` label from the second OCR screenshot.
+
+Then continue with the controlled grammar / multi-item corpus.
+
+Controlled RUB fixture:
 
 `validation/russian-ruble-fixture.html`
 

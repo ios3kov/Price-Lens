@@ -241,3 +241,26 @@ For this format the parser must:
 - ignore discount percentages and unrelated integers;
 - normalize `₽`, `RUB` and `РУБ` to the same currency;
 - return no candidate rather than guess if price/quantity association is not defensible.
+
+
+## Retail grammar coverage
+
+Price-tag support is defined by grammar classes, not a finite retailer list.
+
+Required classes include:
+
+- Unicode digit normalization;
+- locale decimal/grouping forms including spaces, NBSP, apostrophes and Indian grouping;
+- currency symbol/code before, after or in the decimal position;
+- Foundation ISO currency codes plus common symbols/retail aliases;
+- split whole/cents OCR fragments;
+- package-price suffixes such as `р/шт.`;
+- metric, imperial and count unit aliases through a data-driven lexicon;
+- multipacks;
+- discount/reference-price rejection;
+- old/current price geometry and prominence;
+- safe ambiguity refusal.
+
+The parser must never claim universal certainty. Unsupported or near-tied interpretations return no ProductCandidate.
+
+See `docs/RETAIL_GRAMMAR.md`.

@@ -285,3 +285,48 @@ Required:
 - fresh parser regression suite;
 - physical retest against the same Russian shelf label;
 - if the app shows `Text found` but never `Label ready`, collect the observed OCR transcripts in a bounded diagnostic follow-up instead of guessing another parser fix.
+
+## Global retail number/currency grammar
+
+Checked: 2026-10-05
+
+Trigger: repeated physical shelf-label failures showed that retailer/country-specific parser patches do not scale.
+
+### Unicode CLDR sources
+
+- Number and currency patterns:
+  https://cldr.unicode.org/translation/number-currency-formats/number-currency-patterns
+- Number symbols:
+  https://cldr.unicode.org/translation/number-currency-formats/number-symbols
+- LDML Numbers specification:
+  https://unicode.org/reports/tr35/tr35-numbers.html
+
+Relevant facts:
+
+- decimal and grouping separators are locale data, not fixed literal dot/comma semantics;
+- grouping sizes vary, including patterns such as Indian grouping;
+- currency can be rendered as a symbol, ISO code or localized form;
+- currency placement can be before the amount, after it, or even occupy the decimal position (for example `12€50`);
+- number text may include locale-specific digits, separators and bidi direction markers.
+
+### Architecture consequence
+
+Price Lens must not key parsing to the iPhone locale or to a finite list of retailer templates.
+
+The parser now uses:
+
+- Unicode/compatibility normalization;
+- localized digit/separator normalization;
+- Foundation ISO currency inventory plus explicit symbol/retail aliases;
+- data-driven unit aliases;
+- structural numeric grammar;
+- OCR geometry/prominence;
+- ambiguity rejection when multiple interpretations are close.
+
+The contract is recorded in `docs/RETAIL_GRAMMAR.md`.
+
+### Safety boundary
+
+CLDR describes formatting possibilities, but does not resolve retail semantics such as loyalty eligibility, crossed-out old price or which of two conditional offers applies to the shopper.
+
+Those cases remain subject to geometry/context scoring and the no-guessed-winner ambiguity gate.

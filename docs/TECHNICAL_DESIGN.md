@@ -36,12 +36,15 @@ The app is split into four boundaries:
    - Camera framework types do not leak into parsing logic.
 
 3. **Parsing + comparison-session core**
+   - RetailLexicon centralizes ISO currency recognition, symbols/aliases, unit aliases and Unicode/OCR normalization.
+   - PriceTagParser operates on grammar classes instead of retailer-specific layouts.
    - Parses price.
    - Parses package quantity.
    - Normalizes units.
    - Computes unit price.
    - Maintains an in-memory comparison session containing any number of deliberately added compatible products.
    - Rejects semantic duplicates, incompatible dimensions and explicitly different currencies.
+   - Rejects near-tied materially different price/quantity interpretations instead of guessing.
    - Ranks the whole session by normalized unit price and exposes the best item.
    - Keeps the existing pairwise ComparisonEngine for pairwise calculations/tests where useful.
    - Pure Swift/Foundation/CoreGraphics only.

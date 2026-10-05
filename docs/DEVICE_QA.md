@@ -1,6 +1,6 @@
 # Device QA — Price Lens Validation Candidate
 
-Current OCR-fix retest candidate: `7a25dbceb00926a868c5686934c3059e0269e932`
+Current retail-grammar retest candidate: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf`
 Previous multi-item physical candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — Russian ₽ OCR FAIL
 Historical physical candidates:
 - `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
@@ -123,3 +123,26 @@ R01 is blocking.
 | R03 | OCR diagnostic state | If OCR text exists but parser still fails, UI shows Text found | NOT_RUN | |
 | R04 | ₽ vs RUB | Same-currency comparison is accepted | NOT_RUN | |
 | R05 | Old promotional price | Smaller old 269.99 does not beat prominent current 229.99 | NOT_RUN | |
+
+
+## Historical physical OCR result — candidate 7a25dbce
+
+Evidence source: user-reported physical iPhone run and screenshot in the active ChatGPT session.
+
+| ID | Scenario | Status | Evidence / issue |
+| --- | --- | --- | --- |
+| D01 | Local signed install | PASS | Candidate launched on physical iPhone. |
+| R03 | OCR diagnostic state | PASS | UI reached `Text found`, proving VisionKit recognized text. |
+| R06 | Russian `56 + 99 р/шт.` / `315г` label | FAIL | Parser did not produce `Label ready`; per-package ruble suffix was not generalized. |
+
+R06 triggered the RetailLexicon/grammar refactor. The photo also contained an older/smaller price, making this a useful geometry/prominence regression.
+
+## Required generalized-parser retest
+
+| ID | Scenario | Expected | Status | Evidence / issue |
+| --- | --- | --- | --- | --- |
+| G01 | `229 + 99₽ / 200Г` label | `Label ready`, current 229.99 ₽, 0.2 kg | NOT_RUN | |
+| G02 | `56 + 99 р/шт. / 315г` label | `Label ready`, current 56.99 ₽, 0.315 kg | NOT_RUN | |
+| G03 | Old/smaller competing price | Current prominent price wins only when geometry is decisive | NOT_RUN | |
+| G04 | Ambiguous similar prices | Safe refusal / Text found; no guessed Add | NOT_RUN | |
+| G05 | Multi-item after Russian capture | Add 3+ compatible products and rank correctly | NOT_RUN | |

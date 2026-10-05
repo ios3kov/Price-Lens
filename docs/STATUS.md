@@ -13,7 +13,8 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 - Historical physical candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06` — UX FAIL
 - Last physically launched candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
 - Last physically launched multi-item candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — OCR/parser FAIL on Russian shelf label
-- Current OCR-fix validation candidate: `7a25dbceb00926a868c5686934c3059e0269e932`
+- Last physically launched OCR candidate: `7a25dbceb00926a868c5686934c3059e0269e932` — OCR text visible, parser still FAIL on `56 + 99 р/шт. / 315г`
+- Current retail-grammar validation candidate: `d76107bb1389a215eddba03d2bbdbd8efea9c9bf`
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -45,20 +46,21 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 
 ## Internal verification
 
-For current OCR-fix candidate `7a25dbce`:
+For current retail-grammar candidate `d76107bb`:
 
-- GitHub Actions run: `37355428673`
+- GitHub Actions run: `37359173440`
 - Xcode 16.4
 - Swift 6.1.2
 - iOS Simulator build: PASS
 - unsigned iPhone device-target build: PASS
 - built bundle identity: PASS — `com.os3kov.PriceLens 0.1.0 (1)`
 - bundled privacy manifest / Required Reason API `35F9.1`: PASS
-- core regression suite: PASS — 73 executed, 0 failures
-- Russian RUB regression: PASS — current `229 + 99₽`, old `269 + 99`, `200Г`
-- `₽` and `RUB` currency equivalence: PASS
-- dynamic preferred/Russian/English DataScanner language hints compile on iOS target: PASS
-- physical same-label retest: NOT_RUN
+- core regression suite: PASS — 89 executed, 0 failures
+- generalized currency/number/unit corpus: PASS
+- recursive 3–4 label clustering regression: PASS
+- ambiguity gate regression: PASS
+- `KM` and `BAM` canonical-equivalence while preserving shelf display token: PASS
+- physical generalized-parser retest: NOT_RUN
 
 Historical Evidence for earlier candidates remains unchanged.
 
@@ -96,9 +98,9 @@ The next candidate adds RUB parsing, dynamic preferred/ru/en language hints and 
 
 ## Remaining blocker
 
-The sequential multi-item workflow is **not yet validated on a physical iPhone** after the Russian shelf-label OCR fix.
+The generalized retail grammar is **not yet validated on a physical iPhone**.
 
-Next required step: build and install exact candidate `7a25dbce`, first retest the same Russian shelf label / `validation/russian-ruble-fixture.html`, then continue M01–M15 multi-item scenarios.
+Next required step: build and install exact candidate `d76107bb`; first retest both previously failing Russian shelf labels, then run the controlled multi-item corpus and M01–M15.
 
 Blocking runtime failures include any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result, inaccessible critical recovery/result state, unexpected data flow, or unrecoverable camera state.
 
@@ -109,7 +111,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Requirement / obligation | Implementation block | Observable acceptance | Check / phase | Current status / Evidence |
 | --- | --- | --- | --- | --- |
 | Camera-only primary workflow; no manual entry | VisionKit scanner + SwiftUI camera UI | User can compare without typing | pre-handoff: source/build review; user-validation: live camera | Implementation PASS; runtime NOT RUN |
-| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION PASS; 73-test CI PASS; device NOT_RUN |
+| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION PASS; 89-test CI PASS; device NOT_RUN |
 | Price + quantity stay associated with the same tag | geometry clustering + recursive split guards | no cross-tag price/quantity pairing | pre-handoff tests + user-validation fixtures | Automated PASS; live camera NOT RUN |
 | Unit normalization is correct | Decimal parser / ComparisonEngine | g↔kg, ml/cl↔L, count and multipacks yield correct unit price | pre-handoff: unit tests | PASS |
 | Ambiguous/unit-price text does not create a false winner | parser rejection rules | `/kg`, `per 100 g/ml`, unsupported ambiguity do not become package price | pre-handoff: regression tests | PASS |
@@ -117,22 +119,23 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Candidate preview corresponds to centered label | DataScanner bounds + one-label ROI | preview outline/value belongs to the label the user is about to add | user-validation: physical iPhone | NOT RUN |
 | Live OCR is useful on real shelf labels | DataScanner `.accurate` + one-label ROI + stabilization | stable preview is correct before Add; previously added items remain intact | user-validation: physical iPhone | NOT RUN |
 | Performance target | stabilization / on-device processing | useful result <= 1.5 s after stable readable framing | user-validation: physical iPhone timing | NOT RUN |
-| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on 7a25dbce |
+| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on d76107bb |
 | Basic accessibility | SwiftUI semantics + Reduce Motion + result accessibility value | critical result/recovery state is understandable without color-only cues | pre-handoff compile/review + user-validation device checks | Implementation PASS; device checks NOT_RUN |
 | Artifact identity for validation | exact Git commit + bundle ID/version/build + local signed Xcode install | installed test build is traceable to exact candidate | pre-handoff/user-validation boundary | unsigned identity PASS; signed installed identity NOT_RUN |
 | Merge / public release | explicit user authorization required | no merge/publication without command | permission boundary | NOT AUTHORIZED / NOT PERFORMED |
 
 ### Reconciliation result
 
-- Product contract remains the sequential multi-item workflow.
+- Product workflow remains sequential multi-item capture.
 - AS Development Rules 4.1.0 remains adopted.
-- Russian shelf-label OCR failure from `d33616b9` is preserved as historical USER-REPORTED FAIL evidence.
-- Current candidate `7a25dbce` has fresh simulator/device-target/identity/privacy and 73-test PASS evidence.
-- The exact synthetic reproduction of the failed Russian label now passes, including RUB/₽ and old-price competition.
-- DataScanner now prioritizes the user's supported preferred languages plus supported Russian/English hints.
-- Physical same-label retest and M01–M15 remain NOT_RUN.
+- Parser architecture is now grammar-based rather than retailer/country-template-based.
+- `RetailLexicon` centralizes Unicode normalization, ISO currency inventory, symbols/aliases and unit aliases.
+- `PriceTagParser` handles structural numeric classes, OCR fragment geometry and ambiguity rejection.
+- Unicode CLDR number/currency formatting classes are recorded in `docs/RESEARCH.md`.
+- Current candidate `d76107bb` has fresh simulator/device-target/identity/privacy and 89-test PASS evidence.
+- Physical generalized-parser retest and M01–M15 remain NOT_RUN.
 - App Store Release scope remains separate and unauthorized.
-- Current claim: **bounded Russian OCR fix is internally verified; same-label physical retest is the next gate.**
+- Current claim: **generalized retail grammar is internally verified; physical retest of previously failing labels is the next gate.**
 
 ## Release-only open scope
 
@@ -214,3 +217,35 @@ Acceptance:
 - synthetic reproduction `229 + 99₽` with old `269 + 99`, `-15%` and `200Г` parses current price as `229.99 ₽` and quantity as 0.2 kg;
 - `₽` and `RUB` compare as the same currency;
 - physical retest of the same Russian label reaches `Label ready` or, if not, at least exposes `Text found` so the next failure is observable rather than silent.
+
+
+## Retail grammar architecture
+
+The parser no longer treats each retailer/country label as a special case.
+
+Pipeline:
+
+1. Unicode/OCR normalization.
+2. Currency/unit lexicon lookup.
+3. Structural number parsing.
+4. Role classification: package price / old price / reference unit price / quantity / noise.
+5. OCR geometry + prominence scoring.
+6. Ambiguity gate.
+7. ProductCandidate or safe refusal.
+
+Contract: `docs/RETAIL_GRAMMAR.md`.
+
+Current automated corpus includes:
+
+- comma/dot decimals;
+- zero-cents notation;
+- spaces/NBSP/apostrophe/Indian grouping;
+- Arabic-Indic digits and Arabic decimal/group separators;
+- currency before/after/in decimal position;
+- ISO codes and common world symbols;
+- RUB `₽ / RUB / РУБ / р/шт.`;
+- metric + lb/oz + dL/cL + count aliases;
+- Chinese/Arabic unit aliases;
+- Unicode multipacks;
+- old/promotional price competition;
+- near-tied ambiguity rejection.
