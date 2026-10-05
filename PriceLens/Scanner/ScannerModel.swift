@@ -14,6 +14,7 @@ final class ScannerModel: ObservableObject {
     private var dropoutGeneration = 0
 
     func prepareCamera() async {
+        resetRecognition()
         cameraState = .preparing
 
         guard DataScannerViewController.isSupported else {
@@ -124,10 +125,16 @@ final class ScannerModel: ObservableObject {
     }
 
     func scannerBecameUnavailable(_ message: String) {
+        resetRecognition()
+        cameraState = .failed(message)
+    }
+
+    private func resetRecognition() {
         dropoutGeneration += 1
         stabilizer.reset()
+        missingUpdateCount = 0
         visibleCandidates = []
-        cameraState = .failed(message)
+        scanState = .searching
     }
 
     private func scheduleResultDropout(
