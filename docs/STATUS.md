@@ -103,3 +103,19 @@ This is the current scoped reconciliation for the first iPhone validation milest
 - App Store metadata, final privacy labels/policy URLs, archive/export and submission checks belong to Release and are not claimed by this Validation milestone.
 - Merge / public release remain unauthorized.
 - Current claim: **AS 4.1 pre-handoff checks are complete for candidate 8450963d; physical iPhone Validation is the next gate.**
+
+## Release-only open scope
+
+These items do **not** block the current local iPhone Validation gate, but they remain open for a future App Store Release:
+
+- app icon / asset catalog and final launch presentation;
+- final App Store screenshots, description, age rating and review notes;
+- support URL and privacy-policy URL;
+- final App Store privacy labels and Xcode privacy report from the exact release archive;
+- Release archive/export identity, symbols and signing/provisioning review;
+- minimum/stable OS compatibility matrix required for the declared Release support;
+- final physical accessibility/localization pass for declared languages;
+- current Apple submission / SDK / account / agreements / export-compliance checks;
+- App Store upload, review and publication — not authorized.
+
+None of these may be retroactively marked PASS from the current Validation evidence.
