@@ -23,4 +23,4 @@ Current AS 4.1 validation candidate: `8450963d`
 
 Controlled camera fixtures are in `validation/price-tag-fixtures.html`.
 
-See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/PRIVACY.md`, `docs/ACCESSIBILITY.md`, `docs/VALIDATION.md`, `docs/IPHONE_VALIDATION.md` and `docs/EVIDENCE_AS_4_1_VALIDATION_PREP.md`.
+See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/PRIVACY.md`, `docs/ACCESSIBILITY.md`, `docs/VALIDATION.md`, `docs/IPHONE_VALIDATION.md`, `docs/BUILD_IDENTITY_VALIDATION.md`, `docs/DEVICE_QA.md`, `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` and `docs/EVIDENCE_AS_4_1_VALIDATION_PREP.md`.

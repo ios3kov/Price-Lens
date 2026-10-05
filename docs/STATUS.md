@@ -68,7 +68,7 @@ Historical Evidence for earlier commits remains unchanged. See:
 
 The live camera workflow is **not yet validated on a physical iPhone**.
 
-Next required step: build and install the exact clean candidate `8450963d` through local Xcode signing, record the installed identity, then run `docs/IPHONE_VALIDATION.md`: controlled fixtures first, real shelf labels second.
+Next required step: use `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` to build and install the exact clean candidate `8450963d` through local Xcode signing, record the installed identity in `docs/BUILD_IDENTITY_VALIDATION.md`, then execute `docs/DEVICE_QA.md`: controlled fixtures first, real shelf labels second.
 
 Blocking runtime failures include any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result, inaccessible critical recovery/result state, unexpected data flow, or unrecoverable camera state.
 
