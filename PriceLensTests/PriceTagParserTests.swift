@@ -542,6 +542,74 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.currencyToken, "€")
     }
 
+    func testParsesSpaceGroupedGrams() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99", x: 20, y: 20, height: 44),
+                    item("1 000 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(1))
+        XCTAssertEqual(candidate.dimension, .mass)
+    }
+
+    func testTreatsThreeDigitSeparatorAsGroupingForGrams() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99", x: 20, y: 20, height: 44),
+                    item("1.500 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "1.5"))
+    }
+
+    func testTreatsThreeDigitSeparatorAsGroupingForMilliliters() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99", x: 20, y: 20, height: 44),
+                    item("1,500 ml", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "1.5"))
+        XCTAssertEqual(candidate.dimension, .volume)
+    }
+
+    func testKeepsThreeDigitDecimalForLiters() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99", x: 20, y: 20, height: 44),
+                    item("1.500 L", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "1.5"))
+    }
+
+    func testParsesGroupedMultipackSize() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("8.00", x: 20, y: 20, height: 44),
+                    item("2 × 1.500 ml", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(3))
+        XCTAssertEqual(candidate.dimension, .volume)
+    }
+
     func testParsesMultipack() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(
@@ -629,6 +697,28 @@ final class PriceTagParserTests: XCTestCase {
 
         XCTAssertEqual(candidate.normalizedQuantity, Decimal(10))
         XCTAssertEqual(candidate.dimension, .count)
+    }
+
+    func testRejectsPer100GramUnitPriceAsPackagePrice() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("€1.99 per 100 g", x: 20, y: 20, height: 22),
+                item("500 g", x: 20, y: 58, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
+    func testRejectsPer100MilliliterUnitPriceAsPackagePrice() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("1,49 € per 100 ml", x: 20, y: 20, height: 22),
+                item("750 ml", x: 20, y: 58, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
     }
 
     func testPrefersPackagePriceOverUnitPriceLine() throws {

@@ -48,7 +48,7 @@ Examples:
 - separate nearby currency fragments such as `4` + `€`
 - missing decimal separator such as `4 99 €` when currency makes the intent unambiguous
 
-A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Integer-only prices require an adjacent explicit currency; zero-cents notation such as `4,-` is accepted without one. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected. A missing decimal separator is repaired only when currency is explicit on the price item or a nearby currency fragment; bare `4 99` remains rejected.
+A decimal amount with two fraction digits may be treated as a price even when the currency symbol is on a neighboring OCR line. Unit-price lines such as `€/kg`, `per 100 g` and `per 100 ml` are not accepted as the package price. Integer-only prices require an adjacent explicit currency; zero-cents notation such as `4,-` is accepted without one. Split whole/cents recognition is accepted only for nearby, aligned OCR fragments; unrelated numbers are rejected. A missing decimal separator is repaired only when currency is explicit on the price item or a nearby currency fragment; bare `4 99` remains rejected.
 
 ### Mass
 
@@ -57,6 +57,7 @@ A decimal amount with two fraction digits may be treated as a price even when th
 - 1 kg
 - 1.5 kg
 - 1,5 kg
+- grouped base-unit quantities such as 1 000 g / 1.500 g
 
 ### Volume
 
@@ -65,6 +66,7 @@ A decimal amount with two fraction digits may be treated as a price even when th
 - 75 cl
 - 1 L
 - 1.5 l
+- grouped base-unit quantities such as 1 500 ml / 1,500 ml
 
 ### Count
 

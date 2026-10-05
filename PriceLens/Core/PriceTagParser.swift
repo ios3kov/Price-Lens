@@ -372,11 +372,15 @@ enum PriceTagParser {
             return nil
         }
 
-        let multipackPattern = #"(?i)(\d{1,3})\s*[xх×]\s*(\d+(?:[\.,]\d+)?)\s*(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
+        let numberPattern = #"(\d{1,3}(?:\s\d{3})+(?:[\.,]\d+)?|\d+(?:[\.,]\d+)?)"#
+        let unitPattern = #"(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
+
+        let multipackPattern = #"(?i)(\d{1,3})\s*[xх×]\s*"# + numberPattern + #"\s*"# + unitPattern
         if let match = firstMatch(pattern: multipackPattern, in: text),
            let count = capturedDecimal(match, group: 1, text: text),
-           let size = capturedDecimal(match, group: 2, text: text),
+           let sizeRaw = capturedString(match, group: 2, text: text),
            let unit = capturedString(match, group: 3, text: text),
+           let size = quantityDecimal(sizeRaw, unit: unit),
            let normalized = normalize(value: count * size, unit: unit) {
             return QuantityMatch(
                 normalizedValue: normalized.value,
@@ -386,10 +390,11 @@ enum PriceTagParser {
             )
         }
 
-        let simplePattern = #"(?i)(\d+(?:[\.,]\d+)?)\s*(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
+        let simplePattern = #"(?i)"# + numberPattern + #"\s*"# + unitPattern
         guard let match = firstMatch(pattern: simplePattern, in: text),
-              let value = capturedDecimal(match, group: 1, text: text),
+              let valueRaw = capturedString(match, group: 1, text: text),
               let unit = capturedString(match, group: 2, text: text),
+              let value = quantityDecimal(valueRaw, unit: unit),
               let normalized = normalize(value: value, unit: unit) else {
             return nil
         }
@@ -400,6 +405,50 @@ enum PriceTagParser {
             score: quantityScore(item),
             source: item
         )
+    }
+
+    private static func quantityDecimal(
+        _ raw: String,
+        unit rawUnit: String
+    ) -> Decimal? {
+        let unit = rawUnit.lowercased()
+        let compact = raw
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
+
+        // On grocery labels, 1.500 g / 1,500 ml conventionally means
+        // 1500 base units. For kg/L/cl the same notation remains decimal.
+        let groupedBaseUnits = [
+            "g", "gr", "гр", "г",
+            "ml", "мл",
+            "item", "items", "pc", "pcs", "шт"
+        ]
+
+        if groupedBaseUnits.contains(unit) {
+            let groupingPattern = #"^([1-9]\d{0,2})[\.,](\d{3})$"#
+            if let match = firstMatch(
+                pattern: groupingPattern,
+                in: compact
+            ),
+               let whole = capturedString(
+                match,
+                group: 1,
+                text: compact
+               ),
+               let tail = capturedString(
+                match,
+                group: 2,
+                text: compact
+               ) {
+                return Decimal(
+                    string: whole + tail,
+                    locale: Locale(identifier: "en_US_POSIX")
+                )
+            }
+        }
+
+        return decimal(raw)
     }
 
     private static func quantityScore(_ item: ScannedText) -> Double {
@@ -431,15 +480,25 @@ enum PriceTagParser {
     }
 
     private static func containsUnitPriceCue(_ text: String) -> Bool {
-        let compact = text.replacingOccurrences(of: " ", with: "")
+        let compact = text
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
+
         return compact.contains("/kg") ||
             compact.contains("/кг") ||
             compact.contains("/l") ||
             compact.contains("/л") ||
             compact.contains("/100g") ||
             compact.contains("/100ml") ||
+            compact.contains("per100g") ||
+            compact.contains("per100ml") ||
+            compact.contains("za100g") ||
+            compact.contains("za100ml") ||
             text.contains("per kg") ||
             text.contains("per l") ||
+            text.contains("per item") ||
+            text.contains("per pc") ||
             text.contains("za kg") ||
             text.contains("za 1 kg")
     }
