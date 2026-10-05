@@ -10,10 +10,13 @@ camera -> on-device OCR -> exactly two price-tag candidates -> unit normalizatio
 
 - Repository: ios3kov/Price-Lens
 - Working branch: feat/initial-mvp
-- Verified source commit: `7baf84b6d3a9310cd322559a303e2c1f9afc070b`
-- Standard baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45`
-- Delivery gate: Development
+- Validation candidate source commit: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
+- Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
+- Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
+- Delivery gate: Validation
 - Risk profile: Standard
+- Applicable modules: iOS; Privacy/Permissions; Accessibility; Validation/Release
+- Out of current scope: Backend; StoreKit; UGC/AI/Kids; Hybrid; Games
 - Product Discovery: complete for initial v1 scope
 - Reference Audit: not triggered; no concrete external product is a parity target
 - Merge / Release: not authorized and not performed
@@ -37,29 +40,39 @@ camera -> on-device OCR -> exactly two price-tag candidates -> unit normalizatio
 - Time-based recognition stabilization and brief OCR-dropout grace period.
 - Pure production core is tested outside iOS Simulator via Swift Package.
 - Controlled camera fixtures are included for reproducible physical-device validation.
+- `PrivacyInfo.xcprivacy` declares the System Boot Time Required Reason API with approved reason `35F9.1`.
+- CI verifies the manifest inside the built device `.app` and verifies Bundle ID/version/build.
+- Result accessibility exposes winner plus A/B normalized unit prices; candidate-frame animation respects Reduce Motion.
 
 ## Internal verification
 
-For source commit `7baf84b6`:
+For validation candidate source commit `8450963d`:
 
-- GitHub Actions run: `37313009533`
+- GitHub Actions run: `37316764549`
 - Xcode 16.4 (16F6)
 - Swift 6.1.2
-- iOS simulator build: PASS
+- iOS Simulator build: PASS
 - Unsigned iPhone device-target build: PASS
+- Built device bundle identity: PASS — `com.os3kov.PriceLens` `0.1.0 (1)`
+- Bundled privacy manifest: PASS
+- Required Reason API: PASS — `NSPrivacyAccessedAPICategorySystemBootTime / 35F9.1`
+- Tracking declaration: PASS — false
 - Core unit tests: PASS — 65 executed, 0 failures
-- Project TODO/FIXME/fatalError/debug-print audit: no findings
-- Relevant source warnings: none
+- Relevant source warning: only AppIntents metadata extraction skipped because AppIntents is not linked; non-blocking
 
-See `docs/EVIDENCE_INITIAL_MVP.md`.
+Historical Evidence for earlier commits remains unchanged. See:
+- `docs/EVIDENCE_INITIAL_MVP.md` — historical pre-AS baseline
+- `docs/EVIDENCE_AS_4_1_VALIDATION_PREP.md` — current AS 4.1 candidate
 
 ## Remaining blocker
 
 The live camera workflow is **not yet validated on a physical iPhone**.
 
-The next step is the runtime gate in `docs/IPHONE_VALIDATION.md`: controlled fixtures first, then real shelf labels. Any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result or unrecoverable camera state is blocking.
+Next required step: build and install the exact clean candidate `8450963d` through local Xcode signing, record the installed identity, then run `docs/IPHONE_VALIDATION.md`: controlled fixtures first, real shelf labels second.
 
-## TASK-CLOSE-001 — current requirement / task / check mapping
+Blocking runtime failures include any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result, inaccessible critical recovery/result state, unexpected data flow, or unrecoverable camera state.
+
+## AS 4.1 SCOPE / COMPLETE — current requirement / task / check mapping
 
 This is the current scoped reconciliation for the first iPhone validation milestone.
 
@@ -74,15 +87,19 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | A/B overlays correspond to actual tags | DataScanner bounds + overlay | frames A/B align with intended two labels | user-validation: physical iPhone | NOT RUN |
 | Live OCR is useful on real shelf labels | DataScanner `.accurate` + ROI + stabilization | controlled fixtures and real shelf labels produce correct result | user-validation: physical iPhone | NOT RUN |
 | Performance target | stabilization / on-device processing | useful result <= 1.5 s after stable readable framing | user-validation: physical iPhone timing | NOT RUN |
-| Artifact identity for validation | exact Git commit + local signed Xcode build | installed test build is traceable to exact source commit | pre-handoff/user-validation boundary | BLOCKED until signed local build exists |
+| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on 8450963d |
+| Basic accessibility | SwiftUI semantics + Reduce Motion + result accessibility value | critical result/recovery state is understandable without color-only cues | pre-handoff compile/review + user-validation device checks | Implementation PASS; device checks NOT_RUN |
+| Artifact identity for validation | exact Git commit + bundle ID/version/build + local signed Xcode install | installed test build is traceable to exact candidate | pre-handoff/user-validation boundary | unsigned identity PASS; signed installed identity NOT_RUN |
 | Merge / public release | explicit user authorization required | no merge/publication without command | permission boundary | NOT AUTHORIZED / NOT PERFORMED |
 
 ### Reconciliation result
 
-- Product contract still covers the current scope; no new Stage 0 is required.
+- Product contract still covers the current scope; no new discovery is required.
 - Reference Audit remains N/A because there is no concrete external parity target.
-- Internal pre-handoff evidence for source `7baf84b6`: simulator build PASS, unsigned `iphoneos` build PASS, 65/65 core tests PASS, source hygiene audit PASS.
-- Required user-validation items remain intentionally NOT RUN: physical camera OCR, overlay alignment, lifecycle behavior on device, real-shelf behavior and timing.
-- These NOT RUN items are the purpose of the next Validation phase; they must not be reported as PASS before device evidence exists.
-- No cleanup action is required before validation: repository has no known temporary/debug source artifacts that affect the validation candidate.
-- Current completion claim is therefore: **implementation and internal pre-handoff checks complete for the scoped MVP; physical iPhone validation is still required.**
+- AS Development Rules 4.1.0 is explicitly adopted for current work.
+- Targeted Apple research for DataScanner, camera permission and required-reason privacy APIs is recorded in `docs/RESEARCH.md`.
+- Current pre-handoff Evidence for source `8450963d`: simulator build PASS, unsigned `iphoneos` build PASS, bundle identity PASS, privacy manifest PASS, 65/65 core tests PASS.
+- Physical iPhone camera, overlay, lifecycle, accessibility, timing and real-shelf checks remain NOT_RUN and are the purpose of the Validation phase.
+- App Store metadata, final privacy labels/policy URLs, archive/export and submission checks belong to Release and are not claimed by this Validation milestone.
+- Merge / public release remain unauthorized.
+- Current claim: **AS 4.1 pre-handoff checks are complete for candidate 8450963d; physical iPhone Validation is the next gate.**

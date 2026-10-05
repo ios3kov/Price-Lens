@@ -30,6 +30,19 @@ The current regression suite covers:
 
 For verified source commit `7baf84b6`, CI executed 65 tests with 0 failures.
 
+## AS 4.1 pre-handoff checks
+
+Before installing the validation candidate:
+
+- clean Git revision identified;
+- iOS Simulator build PASS;
+- unsigned `iphoneos` build PASS;
+- core unit tests PASS;
+- built device `.app` contains valid `PrivacyInfo.xcprivacy`;
+- bundle identity matches `com.os3kov.PriceLens`, marketing version `0.1.0`, build `1`;
+- privacy manifest declares System Boot Time reason `35F9.1` and tracking=false;
+- no known P0/P1 data-loss/security/payment blocker.
+
 ## Required runtime checks on physical iPhone
 
 Start with `docs/IPHONE_VALIDATION.md` and `validation/price-tag-fixtures.html`.
@@ -88,6 +101,20 @@ Start with `docs/IPHONE_VALIDATION.md` and `validation/price-tag-fixtures.html`.
 - mixed mass / volume -> no winner;
 - explicit different currencies -> no winner;
 - any 3+ valid candidates -> no winner.
+
+### Accessibility
+
+- VoiceOver can understand searching, result and recovery states;
+- result exposes winner and both normalized A/B unit prices;
+- Larger Text does not hide critical actions/result;
+- Reduce Motion disables candidate-frame animation;
+- winner/result is not communicated by color alone.
+
+### Privacy / permission behavior
+
+- camera permission purpose is understandable in context;
+- denied/restricted/revoked path remains recoverable;
+- no unexpected persistence or network behavior is observed during the camera workflow.
 
 ### Timing
 

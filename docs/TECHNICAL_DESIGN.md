@@ -4,12 +4,14 @@
 
 Engineering process baseline:
 
-- AE Development Rules 8.0.0
-- rules commit: 132b7cd32873ba7328e3128ffbb33e1929b74d45
-- delivery gate: Development
-- risk profile for initial implementation: Standard
+- AS Development Rules 4.1.0
+- rules commit: 6a19ab6d44b34376edccda3515f1355d0ead2041
+- delivery gate: Validation preparation
+- risk profile: Standard
+- applicable modules: iOS, Privacy/Permissions, Accessibility, Validation/Release
+- not applicable in current scope: Backend, StoreKit, UGC/AI/Kids, Hybrid, Games
 
-The rules are used as a general engineering standard; After Effects-specific runtime requirements are not applicable to this iOS app.
+The previous AE Development Rules 8.0.0 baseline is historical. AS 4.1.0 is the adopted App Store baseline for current work.
 
 ## Architecture
 
@@ -129,6 +131,8 @@ Initial version:
 - no remote OCR.
 
 The camera stream stays inside Apple’s local scanning stack and app memory.
+
+The recognition stabilizer uses `ProcessInfo.systemUptime` only to measure elapsed time between in-app OCR events. Apple classifies this as a Required Reason API. The app bundles `PrivacyInfo.xcprivacy` with `NSPrivacyAccessedAPICategorySystemBootTime` / reason `35F9.1`; the value is not persisted or transmitted. See `docs/PRIVACY.md` and `docs/RESEARCH.md`.
 
 ## Threading
 

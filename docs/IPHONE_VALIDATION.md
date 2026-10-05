@@ -1,5 +1,8 @@
 # Physical iPhone Validation — Price Lens
 
+Baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
+Channel: local signed Xcode install
+
 This is the first runtime gate after internal CI. It does not authorize merge or release.
 
 ## Target
@@ -58,6 +61,15 @@ After the controlled fixtures pass, test real shelf labels:
 - deny camera -> Open Settings -> grant -> return without restarting;
 - background the app while a result is visible -> return: old result must be gone;
 - temporary scanner failure -> Try Again recovers without app restart.
+
+## Accessibility / privacy checks
+
+- VoiceOver: result announces the winner and both normalized A/B unit prices.
+- Larger Text: no clipped critical result or recovery action.
+- Reduce Motion: candidate-frame animation is disabled.
+- Camera permission denied/revoked remains recoverable.
+- No unexpected network/storage behavior appears during the camera workflow.
+- The installed candidate must match the expected Bundle ID/version/build recorded in the current Evidence.
 
 ## Blocking failures
 

@@ -51,7 +51,7 @@ No manual entry is part of the core workflow.
 - Barcode/product recognition.
 - Photo-library import.
 - Localization expansion.
-- Accessibility polish after the core scanning flow is validated.
+- Extended localization/accessibility polish after the core scanning flow is validated; basic accessible state/result/recovery behavior remains part of Validation.
 
 ## Out of scope for v1
 
