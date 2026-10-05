@@ -96,7 +96,7 @@ enum PriceTagParser {
             return nil
         }
 
-        let multipackPattern = #"(?i)(\d{1,3})\s*[xх×]\s*(\d+(?:[\.,]\d+)?)\s*(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|pcs?|pc|шт)"#
+        let multipackPattern = #"(?i)(\d{1,3})\s*[xх×]\s*(\d+(?:[\.,]\d+)?)\s*(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
         if let match = firstMatch(pattern: multipackPattern, in: text),
            let count = capturedDecimal(match, group: 1, text: text),
            let size = capturedDecimal(match, group: 2, text: text),
@@ -110,7 +110,7 @@ enum PriceTagParser {
             )
         }
 
-        let simplePattern = #"(?i)(\d+(?:[\.,]\d+)?)\s*(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|pcs?|pc|шт)"#
+        let simplePattern = #"(?i)(\d+(?:[\.,]\d+)?)\s*(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
         guard let match = firstMatch(pattern: simplePattern, in: text),
               let value = capturedDecimal(match, group: 1, text: text),
               let unit = capturedString(match, group: 2, text: text),
@@ -147,7 +147,7 @@ enum PriceTagParser {
             return (value / 1000, .volume)
         case "cl":
             return (value / 100, .volume)
-        case "pc", "pcs", "шт":
+        case "item", "items", "pc", "pcs", "шт":
             return (value, .count)
         default:
             return nil
@@ -169,7 +169,7 @@ enum PriceTagParser {
     }
 
     private static func containsAnySupportedUnit(_ text: String) -> Bool {
-        ["kg", "кг", " ml", "мл", " cl", " l", " л", " g", "гр", " г", "pc", "pcs", "шт"]
+        ["kg", "кг", " ml", "мл", " cl", " l", " л", " g", "гр", " г", "item", "pc", "pcs", "шт"]
             .contains(where: text.contains)
     }
 
@@ -274,7 +274,10 @@ enum TagClusterer {
 
         if result.count == 1,
            let split = splitAtLargestHorizontalGap(usable) {
-            result.append(contentsOf: split)
+            // Prefer the spatial split over the mixed mega-cluster. Keeping both
+            // can create a false candidate by pairing a price from one tag with
+            // a quantity from the other.
+            return split
         }
 
         return result
