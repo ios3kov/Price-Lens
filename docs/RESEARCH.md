@@ -104,3 +104,60 @@ CI must verify that the built device `.app` contains `PrivacyInfo.xcprivacy`, th
 - tracking = false.
 
 This research does not replace physical-iPhone camera validation.
+
+## Camera-first UX research after physical validation
+
+Checked: 2026-10-05
+
+Trigger: physical iPhone validation exposed a first-use UX failure even though the scanner itself launched.
+
+### Apple guidance checked
+
+- Human Interface Guidelines — Camera Control:
+  https://developer.apple.com/design/human-interface-guidelines/camera-control
+  - maximize the height and width of the viewfinder;
+  - minimize distractions in the viewfinder;
+  - keep controls contextual and avoid unnecessary duplication.
+
+- Apple design principles:
+  https://developer.apple.com/design/human-interface-guidelines/design-principles
+  - simplicity: be clear and direct;
+  - stay out of the way of the task;
+  - every interface element should earn its place.
+
+- VisionKit — Scanning data with the camera:
+  https://developer.apple.com/documentation/visionkit/scanning-data-with-the-camera
+  - DataScanner provides the live camera surface and item geometry;
+  - custom recognition feedback/highlights are appropriate when the app owns the action logic.
+
+### Physical validation finding
+
+Candidate `8450963d` launched on the user's iPhone and displayed the scanner, but the first screen was reported as confusing and visually unfinished.
+
+Observed issues from the user-provided screenshot:
+
+- camera preview did not read as an edge-to-edge viewfinder because large black areas dominated the top/bottom;
+- a large dashed rectangle read as a technical debug overlay rather than a consumer scanner;
+- the bottom instruction card obscured too much of the camera;
+- state was not glanceable: user could not immediately see 0/2, 1/2 or 2/2 labels found;
+- A/B labels were not explained by the first-use hierarchy;
+- branding competed with the primary action.
+
+### Decision
+
+Retain the camera-only workflow and OCR architecture. Redesign only the presentation/scanner sizing:
+
+- force the camera surface to fill the available screen;
+- reduce the scan guide to four subtle corners;
+- add a compact 0/2 → 1/2 → 2/2 progress indicator;
+- keep a single compact bottom status panel;
+- preserve A/B labels directly on recognized tags;
+- make the result a concise bottom comparison sheet;
+- add one success haptic per newly stabilized semantic pair;
+- retain Reduce Motion and VoiceOver behavior.
+
+No new navigation, manual input, settings flow or product scope is introduced.
+
+### Verification
+
+Fresh CI is required because production UI bytes change. Then the new candidate must be reinstalled and the original first-screen symptom rechecked on the physical iPhone before the UX finding can be closed.

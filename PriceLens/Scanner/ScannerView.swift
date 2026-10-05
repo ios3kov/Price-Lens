@@ -21,6 +21,23 @@ struct ScannerView: UIViewControllerRepresentable {
         )
 
         scanner.delegate = context.coordinator
+        scanner.view.backgroundColor = .black
+        scanner.view.setContentHuggingPriority(
+            .defaultLow,
+            for: .horizontal
+        )
+        scanner.view.setContentHuggingPriority(
+            .defaultLow,
+            for: .vertical
+        )
+        scanner.view.setContentCompressionResistancePriority(
+            .defaultLow,
+            for: .horizontal
+        )
+        scanner.view.setContentCompressionResistancePriority(
+            .defaultLow,
+            for: .vertical
+        )
 
         Task { @MainActor in
             scanner.view.layoutIfNeeded()

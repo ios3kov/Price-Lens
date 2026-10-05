@@ -10,7 +10,8 @@ camera -> on-device OCR -> exactly two price-tag candidates -> unit normalizatio
 
 - Repository: ios3kov/Price-Lens
 - Working branch: feat/initial-mvp
-- Validation candidate source commit: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
+- Last physically launched candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
+- Next validation candidate: pending UI-fix commit + fresh CI
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -64,9 +65,21 @@ Historical Evidence for earlier commits remains unchanged. See:
 - `docs/EVIDENCE_INITIAL_MVP.md` — historical pre-AS baseline
 - `docs/EVIDENCE_AS_4_1_VALIDATION_PREP.md` — current AS 4.1 candidate
 
+## Current physical-validation finding
+
+User-reported physical iPhone run of candidate `8450963d`:
+
+- local signed install / launch: PASS;
+- live scanner opened: PASS;
+- first-use camera UX clarity / visual polish: FAIL.
+
+The screenshot showed large black letterbox areas, an oversized technical-looking scan rectangle, an oversized instruction card and no clear 0/2 → 1/2 → 2/2 recognition state.
+
+This is a blocking UX finding for the current Validation milestone. The OCR/core implementation is retained; the presentation/scanner sizing is being revised under the existing product contract.
+
 ## Remaining blocker
 
-The live camera workflow is **not yet validated on a physical iPhone**.
+The live camera workflow is **not yet validated on a physical iPhone** after the UX fix.
 
 Next required step: use `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` to build and install the exact clean candidate `8450963d` through local Xcode signing, record the installed identity in `docs/BUILD_IDENTITY_VALIDATION.md`, then execute `docs/DEVICE_QA.md`: controlled fixtures first, real shelf labels second.
 
@@ -102,7 +115,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 - Physical iPhone camera, overlay, lifecycle, accessibility, timing and real-shelf checks remain NOT_RUN and are the purpose of the Validation phase.
 - App Store metadata, final privacy labels/policy URLs, archive/export and submission checks belong to Release and are not claimed by this Validation milestone.
 - Merge / public release remain unauthorized.
-- Current claim: **AS 4.1 pre-handoff checks are complete for candidate 8450963d; physical iPhone Validation is the next gate.**
+- Current claim: **candidate 8450963d passed pre-handoff checks and launched physically, but its first-use scanning UX failed user validation; a new UI candidate must pass fresh CI and repeat the physical run.**
 
 ## Release-only open scope
 

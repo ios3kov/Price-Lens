@@ -52,3 +52,16 @@ Any of these blocks the Validation milestone:
 - repeated stable-read timing above the agreed target.
 
 Visual polish that does not change interpretation or accessibility of the core task is non-blocking for this first device pass.
+
+## Historical user-validation result — candidate 8450963d
+
+Evidence source: user-reported physical iPhone run and screenshot in the active ChatGPT session.
+
+| ID | Scenario | Status | Evidence / issue |
+| --- | --- | --- | --- |
+| D01 | Local signed install | PASS | App launched on the physical iPhone. |
+| D28 | First-use camera UX clarity | FAIL | Camera screen looked like an engineering prototype: large black areas, oversized dashed ROI and instruction card, no glanceable 0/2 → 1/2 → 2/2 recognition state. |
+
+D28 is treated as blocking for the current Validation milestone because it affects comprehension of the core workflow, not merely decorative polish.
+
+After production UI bytes change, D01/D28 and affected scanner/accessibility checks must be repeated on the new candidate. The PASS above remains historical Evidence for `8450963d` only.

@@ -135,6 +135,13 @@ Permission denied, restriction, unsupported hardware or scanner runtime failure.
 - The winner must be visually distinct without relying on color alone.
 - UI must not cover the central price-tag area more than necessary.
 - A subtle comparison-zone guide must match the actual OCR region of interest.
+- The camera viewfinder must visually fill the screen; large unexplained letterbox areas are not acceptable in the primary scanning state.
+- The user must understand recognition progress at a glance: 0/2, 1/2, 2/2 or too many labels.
+- The scan guide should use lightweight corner cues rather than a dominant technical/debug-style rectangle.
+- Guidance must stay compact and must not obscure the central scanning area.
+- A/B markers must appear directly on the recognized labels and map unambiguously to the result card.
+- The primary scanning state requires no tap; this must be stated clearly in the first-use guidance.
+- The result should appear as a compact comparison sheet with the cheaper option identified by text/symbol, not color alone.
 
 ## Acceptance examples
 
