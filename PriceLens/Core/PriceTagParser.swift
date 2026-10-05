@@ -27,10 +27,26 @@ enum PriceTagParser {
         let prices = usable.compactMap(priceMatch)
         let quantities = usable.compactMap(quantityMatch)
 
-        guard let price = prices.max(by: { $0.score < $1.score }),
-              let quantity = quantities.max(by: { $0.score < $1.score }) else {
+        let pairs = prices.flatMap { price in
+            quantities.compactMap { quantity -> (PriceMatch, QuantityMatch, Double)? in
+                // A bare line such as "1.50 L" must not be used as both price
+                // and package size. The same OCR item is only acceptable for
+                // both roles when an explicit currency marker disambiguates it.
+                if price.source.id == quantity.source.id,
+                   currencyToken(in: price.source.transcript) == nil {
+                    return nil
+                }
+
+                return (price, quantity, price.score + quantity.score)
+            }
+        }
+
+        guard let bestPair = pairs.max(by: { $0.2 < $1.2 }) else {
             return nil
         }
+
+        let price = bestPair.0
+        let quantity = bestPair.1
 
         // Avoid accepting a weak accidental number/unit pair.
         guard price.score >= 1.0, quantity.score >= 1.0 else {
@@ -41,10 +57,14 @@ enum PriceTagParser {
             partial.union(item.bounds)
         }
 
+        let clusterCurrency = price.currency ?? usable.lazy
+            .compactMap { currencyToken(in: $0.transcript) }
+            .first
+
         return ProductCandidate(
             id: UUID(),
             price: price.value,
-            currencyToken: price.currency,
+            currencyToken: clusterCurrency,
             normalizedQuantity: quantity.normalizedValue,
             dimension: quantity.dimension,
             sourceBounds: bounds,
