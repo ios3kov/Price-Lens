@@ -10,8 +10,8 @@ final class ScannerModel: ObservableObject {
     @Published private(set) var visibleCandidates: [ProductCandidate] = []
 
     private var stabilizer = RecognitionStabilizer()
+    private var dropoutGate = DropoutGraceGate()
     private var missingUpdateCount = 0
-    private var dropoutGeneration = 0
 
     func prepareCamera() async {
         resetRecognition()
@@ -59,7 +59,7 @@ final class ScannerModel: ObservableObject {
         candidates = CandidateDeduplicator.deduplicated(candidates)
 
         if candidates.count > 2 {
-            dropoutGeneration += 1
+            dropoutGate.cancel()
             visibleCandidates = []
             stabilizer.reset()
             missingUpdateCount = 0
@@ -77,7 +77,7 @@ final class ScannerModel: ObservableObject {
                 return
             }
 
-            dropoutGeneration += 1
+            dropoutGate.cancel()
             stabilizer.reset()
 
             if candidates.count == 1 {
@@ -90,7 +90,7 @@ final class ScannerModel: ObservableObject {
             return
         }
 
-        dropoutGeneration += 1
+        dropoutGate.cancel()
         missingUpdateCount = 0
 
         // Exactly two valid candidates are required. If there are more, the
@@ -130,7 +130,7 @@ final class ScannerModel: ObservableObject {
     }
 
     private func resetRecognition() {
-        dropoutGeneration += 1
+        dropoutGate.cancel()
         stabilizer.reset()
         missingUpdateCount = 0
         visibleCandidates = []
@@ -140,14 +140,15 @@ final class ScannerModel: ObservableObject {
     private func scheduleResultDropout(
         fallbackCandidates: [ProductCandidate]
     ) {
-        dropoutGeneration += 1
-        let generation = dropoutGeneration
+        guard let generation = dropoutGate.begin() else {
+            return
+        }
 
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 300_000_000)
 
             guard let self,
-                  self.dropoutGeneration == generation,
+                  self.dropoutGate.complete(generation: generation),
                   case .result = self.scanState else {
                 return
             }

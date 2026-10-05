@@ -7,6 +7,28 @@ import XCTest
 #endif
 
 final class PriceTagParserTests: XCTestCase {
+    func testDropoutGraceGateSchedulesOnlyOnceUntilCompleted() throws {
+        var gate = DropoutGraceGate()
+
+        let generation = try XCTUnwrap(gate.begin())
+        XCTAssertNil(gate.begin())
+        XCTAssertTrue(gate.isPending)
+
+        XCTAssertTrue(gate.complete(generation: generation))
+        XCTAssertFalse(gate.isPending)
+        XCTAssertNotNil(gate.begin())
+    }
+
+    func testDropoutGraceGateCancellationInvalidatesPendingGeneration() throws {
+        var gate = DropoutGraceGate()
+
+        let generation = try XCTUnwrap(gate.begin())
+        gate.cancel()
+
+        XCTAssertFalse(gate.complete(generation: generation))
+        XCTAssertFalse(gate.isPending)
+    }
+
     func testDeduplicatorCollapsesSameCandidateInSameArea() {
         let first = productCandidate(
             price: "4.99",

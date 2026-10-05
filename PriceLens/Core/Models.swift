@@ -127,6 +127,36 @@ enum CandidateOrdering {
 }
 
 
+
+struct DropoutGraceGate {
+    private(set) var generation = 0
+    private(set) var isPending = false
+
+    mutating func begin() -> Int? {
+        guard !isPending else {
+            return nil
+        }
+
+        generation += 1
+        isPending = true
+        return generation
+    }
+
+    mutating func cancel() {
+        generation += 1
+        isPending = false
+    }
+
+    mutating func complete(generation expected: Int) -> Bool {
+        guard isPending, generation == expected else {
+            return false
+        }
+
+        isPending = false
+        return true
+    }
+}
+
 struct RecognitionStabilizer {
     let requiredDuration: TimeInterval
 
