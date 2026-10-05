@@ -181,6 +181,18 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.unitPrice, Decimal(string: "9.98"))
     }
 
+    func testRejectsSameSizeNumericFragmentsAsSplitPriceWithoutCurrency() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("4", x: 20, y: 20, width: 58, height: 40),
+                item("99", x: 82, y: 20, width: 46, height: 40),
+                item("500 g", x: 20, y: 72, width: 120, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
     func testRejectsDistantWholeAndCentsFragments() {
         let candidate = PriceTagParser.parse(
             cluster: [

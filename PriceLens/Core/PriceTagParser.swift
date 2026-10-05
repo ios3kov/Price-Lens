@@ -180,8 +180,8 @@ enum PriceTagParser {
             fractionCandidates.compactMap { fractionItem, fractionValue in
                 guard wholeItem.id != fractionItem.id,
                       looksLikeSplitPrice(
-                        whole: wholeItem.bounds,
-                        fraction: fractionItem.bounds
+                        whole: wholeItem,
+                        fraction: fractionItem
                       ) else {
                     return nil
                 }
@@ -219,31 +219,45 @@ enum PriceTagParser {
     }
 
     private static func looksLikeSplitPrice(
-        whole: CGRect,
-        fraction: CGRect
+        whole: ScannedText,
+        fraction: ScannedText
     ) -> Bool {
-        guard fraction.midX > whole.midX else {
+        let wholeBounds = whole.bounds
+        let fractionBounds = fraction.bounds
+
+        guard fractionBounds.midX > wholeBounds.midX else {
             return false
         }
 
-        let horizontalGap = fraction.minX - whole.maxX
-        let maxGap = max(26, whole.height * 0.9)
+        let horizontalGap = fractionBounds.minX - wholeBounds.maxX
+        let maxGap = max(26, wholeBounds.height * 0.9)
 
         guard horizontalGap <= maxGap else {
             return false
         }
 
-        let verticalCenterDistance = abs(fraction.midY - whole.midY)
-        let allowedVerticalDistance = max(22, max(whole.height, fraction.height) * 0.72)
+        let verticalCenterDistance = abs(
+            fractionBounds.midY - wholeBounds.midY
+        )
+        let allowedVerticalDistance = max(
+            22,
+            max(wholeBounds.height, fractionBounds.height) * 0.72
+        )
 
         guard verticalCenterDistance <= allowedVerticalDistance else {
             return false
         }
 
-        // Small cents are common, but fragments with wildly different scale
-        // are more likely unrelated OCR than one shelf price.
-        guard fraction.height >= whole.height * 0.30,
-              fraction.height <= whole.height * 1.35 else {
+        guard fractionBounds.height >= wholeBounds.height * 0.30,
+              fractionBounds.height <= wholeBounds.height * 1.35 else {
+            return false
+        }
+
+        // If the cents fragment itself has a currency marker, that is strong
+        // evidence that it belongs to the shelf price. Otherwise require the
+        // cents to be visually smaller than the whole-number part.
+        if currencyToken(in: fraction.transcript) == nil,
+           fractionBounds.height > wholeBounds.height * 0.87 {
             return false
         }
 
