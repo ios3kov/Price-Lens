@@ -14,6 +14,8 @@ final class ScannerModel: ObservableObject {
     private var missingUpdateCount = 0
 
     func prepareCamera() async {
+        cameraState = .preparing
+
         guard DataScannerViewController.isSupported else {
             cameraState = .unsupported
             return

@@ -23,6 +23,7 @@
 - Recognition needs temporal stabilization so the result does not flicker.
 - Ambiguous recognition must resolve to a retry/guidance state, not a guessed winner.
 - Camera permission denial and unsupported hardware need explicit states.
+- A denied camera permission must offer a direct Settings recovery path and re-check permission when the app becomes active again.
 - The parsing/comparison core must be testable without the camera.
 
 ## Supported notation in the first parser
@@ -107,7 +108,7 @@ OCR confidence or parsing confidence is below the safe threshold.
 
 ### Camera unavailable
 
-Permission denied, restriction, unsupported hardware or scanner runtime failure.
+Permission denied, restriction, unsupported hardware or scanner runtime failure. Permission denial offers an Open Settings action; returning to the app re-checks access without requiring a restart.
 
 ## UX contract
 

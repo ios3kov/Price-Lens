@@ -1,6 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var scannerModel = ScannerModel()
 
     var body: some View {
@@ -25,6 +28,16 @@ struct ContentView: View {
         .task {
             await scannerModel.prepareCamera()
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active,
+                  scannerModel.cameraState != .ready else {
+                return
+            }
+
+            Task {
+                await scannerModel.prepareCamera()
+            }
+        }
     }
 
     @ViewBuilder
@@ -39,10 +52,7 @@ struct ContentView: View {
                 .tint(.white)
 
         case .denied:
-            unavailableView(
-                title: "Camera access is off",
-                detail: "Enable camera access for Price Lens in Settings."
-            )
+            cameraDeniedView
 
         case .unsupported:
             unavailableView(
@@ -128,6 +138,33 @@ struct ContentView: View {
         default:
             EmptyView()
         }
+    }
+
+    private var cameraDeniedView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "camera.fill")
+                .font(.system(size: 28, weight: .semibold))
+
+            Text("Camera access is off")
+                .font(.headline)
+
+            Text("Enable camera access for Price Lens in Settings.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+
+            Button("Open Settings") {
+                guard let url = URL(
+                    string: UIApplication.openSettingsURLString
+                ) else {
+                    return
+                }
+                openURL(url)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(24)
+        .foregroundStyle(.white)
     }
 
     private func unavailableView(
