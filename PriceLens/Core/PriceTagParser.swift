@@ -372,7 +372,7 @@ enum PriceTagParser {
             return nil
         }
 
-        let numberPattern = #"(\d{1,3}(?:\s\d{3})+(?:[\.,]\d+)?|\d+(?:[\.,]\d+)?)"#
+        let numberPattern = #"(?<![\d\.,])(\d{1,3}(?:\s\d{3})+(?:[\.,]\d+)?|\d+(?:[\.,]\d+)?)"#
         let unitPattern = #"(kg|кг|ml|мл|cl|l|л|gr|гр|g|г|items?|pcs?|pc|шт)"#
 
         let multipackPattern = #"(?i)(\d{1,3})\s*[xх×]\s*"# + numberPattern + #"\s*"# + unitPattern
