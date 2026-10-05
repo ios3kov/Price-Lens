@@ -7,6 +7,7 @@ import VisionKit
 final class ScannerModel: ObservableObject {
     @Published private(set) var cameraState: CameraState = .preparing
     @Published private(set) var scanState: ScanState = .searching
+    @Published private(set) var visibleCandidates: [ProductCandidate] = []
 
     private var pendingSignature: String?
     private var stableUpdateCount = 0
@@ -64,8 +65,10 @@ final class ScannerModel: ObservableObject {
             }
 
             if candidates.count == 1 {
+                visibleCandidates = candidates
                 scanState = .oneTagFound
             } else if missingUpdateCount >= 3 {
+                visibleCandidates = []
                 scanState = .searching
                 pendingSignature = nil
                 stableUpdateCount = 0
@@ -75,18 +78,30 @@ final class ScannerModel: ObservableObject {
 
         missingUpdateCount = 0
 
-        // Prefer the two strongest candidates, then restore left-to-right order.
+        // Prefer the two strongest candidates, then give them a deterministic
+        // screen order: left-to-right, or top-to-bottom when nearly aligned.
         let strongest = Array(
             candidates
                 .sorted { $0.confidence > $1.confidence }
                 .prefix(2)
         )
-        let ordered = strongest.sorted { $0.centerX < $1.centerX }
+        let ordered = strongest.sorted { lhs, rhs in
+            let horizontalDistance = abs(
+                lhs.sourceBounds.midX - rhs.sourceBounds.midX
+            )
+            if horizontalDistance > 44 {
+                return lhs.sourceBounds.midX < rhs.sourceBounds.midX
+            }
+            return lhs.sourceBounds.midY < rhs.sourceBounds.midY
+        }
 
         guard ordered.count == 2 else {
+            visibleCandidates = []
             scanState = .searching
             return
         }
+
+        visibleCandidates = ordered
 
         let left = ordered[0]
         let right = ordered[1]
@@ -116,6 +131,7 @@ final class ScannerModel: ObservableObject {
     }
 
     func scannerBecameUnavailable(_ message: String) {
+        visibleCandidates = []
         cameraState = .failed(message)
     }
 

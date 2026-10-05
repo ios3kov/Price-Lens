@@ -9,6 +9,10 @@ struct ContentView: View {
 
             cameraLayer
 
+            if scannerModel.cameraState == .ready {
+                candidateOverlay
+            }
+
             VStack(spacing: 16) {
                 header
                 Spacer()
@@ -52,6 +56,24 @@ struct ContentView: View {
                 detail: message
             )
         }
+    }
+
+    private var candidateOverlay: some View {
+        GeometryReader { _ in
+            let candidates = Array(scannerModel.visibleCandidates.prefix(2))
+
+            ZStack {
+                ForEach(candidates.indices, id: \.self) { index in
+                    CandidateFrame(
+                        label: index == 0 ? "A" : "B",
+                        bounds: candidates[index].sourceBounds
+                    )
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     private var header: some View {
@@ -158,6 +180,34 @@ private struct HintCard: View {
     }
 }
 
+private struct CandidateFrame: View {
+    let label: String
+    let bounds: CGRect
+
+    var body: some View {
+        let expanded = bounds.insetBy(dx: -8, dy: -8)
+
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.white.opacity(0.96), lineWidth: 2)
+
+            Text(label)
+                .font(.caption.weight(.black))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.white, in: Capsule())
+                .offset(x: 8, y: 8)
+        }
+        .frame(
+            width: max(44, expanded.width),
+            height: max(44, expanded.height)
+        )
+        .position(x: expanded.midX, y: expanded.midY)
+        .animation(.easeOut(duration: 0.12), value: bounds)
+    }
+}
+
 private struct ResultCard: View {
     let comparison: PriceComparison
 
@@ -171,13 +221,13 @@ private struct ResultCard: View {
 
             HStack(spacing: 10) {
                 priceColumn(
-                    title: "LEFT",
+                    title: "A",
                     value: comparison.left.unitPrice,
                     isWinner: comparison.winner == .left
                 )
 
                 priceColumn(
-                    title: "RIGHT",
+                    title: "B",
                     value: comparison.right.unitPrice,
                     isWinner: comparison.winner == .right
                 )

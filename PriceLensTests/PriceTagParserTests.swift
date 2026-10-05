@@ -173,6 +173,73 @@ final class PriceTagParserTests: XCTestCase {
         }
     }
 
+    func testClustererKeepsTwoNearbyTagsSeparate() {
+        let items = [
+            item("4.99", x: 20, y: 20, height: 40),
+            item("500 g", x: 20, y: 68, height: 22),
+            item("7.49", x: 170, y: 20, height: 40),
+            item("1 kg", x: 170, y: 68, height: 22)
+        ]
+
+        let clusters = TagClusterer.clusters(from: items)
+        let candidates = clusters.compactMap(PriceTagParser.parse(cluster:))
+
+        XCTAssertEqual(clusters.count, 2)
+        XCTAssertEqual(candidates.count, 2)
+    }
+
+    func testEqualUnitPricesProduceNoWinner() throws {
+        let first = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("2.00", x: 20, y: 20, height: 40),
+                    item("500 g", x: 20, y: 68, height: 22)
+                ]
+            )
+        )
+        let second = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.00", x: 220, y: 20, height: 40),
+                    item("1 kg", x: 220, y: 68, height: 22)
+                ]
+            )
+        )
+
+        let comparison = try XCTUnwrap(
+            try? ComparisonEngine.compare(left: first, right: second).get()
+        )
+
+        XCTAssertEqual(comparison.winner, .equal)
+        XCTAssertEqual(comparison.cheaperPercent, 0)
+    }
+
+    func testRejectsDifferentExplicitCurrencies() throws {
+        let first = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("€2.00", x: 20, y: 20, height: 40),
+                    item("500 g", x: 20, y: 68, height: 22)
+                ]
+            )
+        )
+        let second = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("$2.00", x: 220, y: 20, height: 40),
+                    item("500 g", x: 220, y: 68, height: 22)
+                ]
+            )
+        )
+
+        switch ComparisonEngine.compare(left: first, right: second) {
+        case .failure(.differentCurrencies):
+            break
+        default:
+            XCTFail("Expected different currencies")
+        }
+    }
+
     private func item(
         _ transcript: String,
         x: CGFloat,
