@@ -8,6 +8,22 @@ struct ScannedText: Identifiable, Equatable {
     let confidence: Float
 }
 
+
+enum ScanRegionLayout {
+    static func rect(in bounds: CGRect) -> CGRect? {
+        guard bounds.width > 0, bounds.height > 0 else {
+            return nil
+        }
+
+        return CGRect(
+            x: bounds.minX + bounds.width * 0.05,
+            y: bounds.minY + bounds.height * 0.14,
+            width: bounds.width * 0.90,
+            height: bounds.height * 0.58
+        )
+    }
+}
+
 enum QuantityDimension: String, Equatable {
     case mass
     case volume

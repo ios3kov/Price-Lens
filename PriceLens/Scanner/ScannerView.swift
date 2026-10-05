@@ -23,6 +23,11 @@ struct ScannerView: UIViewControllerRepresentable {
         scanner.delegate = context.coordinator
 
         Task { @MainActor in
+            scanner.view.layoutIfNeeded()
+            if let region = ScanRegionLayout.rect(in: scanner.view.bounds) {
+                scanner.regionOfInterest = region
+            }
+
             do {
                 try scanner.startScanning()
             } catch {
@@ -38,7 +43,13 @@ struct ScannerView: UIViewControllerRepresentable {
     func updateUIViewController(
         _ uiViewController: DataScannerViewController,
         context: Context
-    ) {}
+    ) {
+        if let region = ScanRegionLayout.rect(
+            in: uiViewController.view.bounds
+        ), uiViewController.regionOfInterest != region {
+            uiViewController.regionOfInterest = region
+        }
+    }
 
     static func dismantleUIViewController(
         _ uiViewController: DataScannerViewController,

@@ -7,6 +7,22 @@ import XCTest
 #endif
 
 final class PriceTagParserTests: XCTestCase {
+    func testScanRegionLeavesSpaceForTopAndBottomUI() throws {
+        let bounds = CGRect(x: 0, y: 0, width: 390, height: 844)
+        let region = try XCTUnwrap(ScanRegionLayout.rect(in: bounds))
+
+        XCTAssertGreaterThan(region.minX, bounds.minX)
+        XCTAssertGreaterThan(region.minY, bounds.minY)
+        XCTAssertLessThan(region.maxX, bounds.maxX)
+        XCTAssertLessThan(region.maxY, bounds.maxY)
+        XCTAssertEqual(region.width, 351, accuracy: 0.01)
+        XCTAssertEqual(region.height, 489.52, accuracy: 0.01)
+    }
+
+    func testScanRegionRejectsEmptyBounds() {
+        XCTAssertNil(ScanRegionLayout.rect(in: .zero))
+    }
+
     func testSupportedParserCorpus() throws {
         struct Case {
             let name: String

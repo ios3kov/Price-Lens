@@ -19,6 +19,8 @@ The app is split into four boundaries:
    - VisionKit DataScannerViewController.
    - Live recognized text items.
    - Camera permission / availability handling.
+   - A shared ScanRegionLayout defines the visible comparison guide and DataScannerViewController.regionOfInterest in the same view-coordinate system.
+   - Text outside that region is excluded before app-owned grouping/parsing.
    - Converts Apple framework objects into app-owned ScannedText values.
 
 2. **Tag grouping**

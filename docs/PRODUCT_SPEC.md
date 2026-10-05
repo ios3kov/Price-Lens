@@ -16,7 +16,8 @@
 
 ### Derived requirements
 
-- OCR results must be grouped into two price-tag candidates.
+- The live scanner must restrict recognition to a visible central comparison zone so surrounding shelf labels are not silently selected.
+- OCR results inside that zone must be grouped into two price-tag candidates.
 - Price and quantity must be associated with the correct tag.
 - Quantities must be normalized before comparison.
 - The system must refuse comparison when dimensions differ.
@@ -122,6 +123,7 @@ Permission denied, restriction, unsupported hardware or scanner runtime failure.
 - A successful result should be readable at a glance.
 - The winner must be visually distinct without relying on color alone.
 - UI must not cover the central price-tag area more than necessary.
+- A subtle comparison-zone guide must match the actual OCR region of interest.
 
 ## Acceptance examples
 

@@ -69,10 +69,14 @@ struct ContentView: View {
     }
 
     private var candidateOverlay: some View {
-        GeometryReader { _ in
+        GeometryReader { proxy in
             let candidates = Array(scannerModel.visibleCandidates.prefix(2))
+            let fullBounds = CGRect(origin: .zero, size: proxy.size)
+            let scanRegion = ScanRegionLayout.rect(in: fullBounds) ?? .zero
 
             ZStack {
+                ScanRegionGuide(bounds: scanRegion)
+
                 ForEach(candidates.indices, id: \.self) { index in
                     CandidateFrame(
                         label: index == 0 ? "A" : "B",
@@ -109,13 +113,13 @@ struct ContentView: View {
             case .searching:
                 HintCard(
                     title: "Point at two price tags",
-                    detail: "Keep price and package size visible"
+                    detail: "Keep both price tags inside the frame"
                 )
 
             case .oneTagFound:
                 HintCard(
                     title: "One tag found",
-                    detail: "Move slightly so both tags are visible"
+                    detail: "Move slightly so both tags are inside the frame"
                 )
 
             case .comparing:
@@ -214,6 +218,23 @@ private struct HintCard: View {
         .foregroundStyle(.white)
         .padding(16)
         .background(.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 22))
+    }
+}
+
+private struct ScanRegionGuide: View {
+    let bounds: CGRect
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 22)
+            .stroke(
+                .white.opacity(0.38),
+                style: StrokeStyle(
+                    lineWidth: 1.5,
+                    dash: [12, 9]
+                )
+            )
+            .frame(width: bounds.width, height: bounds.height)
+            .position(x: bounds.midX, y: bounds.midY)
     }
 }
 
