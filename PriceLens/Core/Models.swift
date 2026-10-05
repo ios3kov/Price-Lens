@@ -69,6 +69,39 @@ struct ProductCandidate: Identifiable, Equatable {
 }
 
 
+
+enum CandidateDeduplicator {
+    static func deduplicated(
+        _ candidates: [ProductCandidate],
+        centerTolerance: CGFloat = 48
+    ) -> [ProductCandidate] {
+        var output: [ProductCandidate] = []
+
+        for candidate in candidates.sorted(by: { $0.confidence > $1.confidence }) {
+            let isDuplicate = output.contains { existing in
+                guard existing.semanticSignature == candidate.semanticSignature else {
+                    return false
+                }
+
+                let dx = abs(
+                    existing.sourceBounds.midX - candidate.sourceBounds.midX
+                )
+                let dy = abs(
+                    existing.sourceBounds.midY - candidate.sourceBounds.midY
+                )
+
+                return dx < centerTolerance && dy < centerTolerance
+            }
+
+            if !isDuplicate {
+                output.append(candidate)
+            }
+        }
+
+        return output
+    }
+}
+
 enum CandidateOrdering {
     static func ordered(_ candidates: [ProductCandidate]) -> [ProductCandidate] {
         guard candidates.count >= 2 else {

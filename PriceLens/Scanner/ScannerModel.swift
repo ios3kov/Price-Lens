@@ -56,7 +56,7 @@ final class ScannerModel: ObservableObject {
         var candidates = TagClusterer.clusters(from: items)
             .compactMap(PriceTagParser.parse(cluster:))
 
-        candidates = deduplicated(candidates)
+        candidates = CandidateDeduplicator.deduplicated(candidates)
 
         if candidates.count > 2 {
             dropoutGeneration += 1
@@ -164,22 +164,4 @@ final class ScannerModel: ObservableObject {
         }
     }
 
-    private func deduplicated(
-        _ candidates: [ProductCandidate]
-    ) -> [ProductCandidate] {
-        var output: [ProductCandidate] = []
-
-        for candidate in candidates.sorted(by: { $0.confidence > $1.confidence }) {
-            let isDuplicate = output.contains { existing in
-                existing.semanticSignature == candidate.semanticSignature &&
-                abs(existing.centerX - candidate.centerX) < 48
-            }
-
-            if !isDuplicate {
-                output.append(candidate)
-            }
-        }
-
-        return output
-    }
 }

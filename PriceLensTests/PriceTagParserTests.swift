@@ -7,6 +7,62 @@ import XCTest
 #endif
 
 final class PriceTagParserTests: XCTestCase {
+    func testDeduplicatorCollapsesSameCandidateInSameArea() {
+        let first = productCandidate(
+            price: "4.99",
+            quantity: "0.5",
+            bounds: CGRect(x: 20, y: 20, width: 120, height: 70),
+            confidence: 0.95
+        )
+        let duplicate = productCandidate(
+            price: "4.99",
+            quantity: "0.5",
+            bounds: CGRect(x: 24, y: 25, width: 118, height: 68),
+            confidence: 0.80
+        )
+
+        let output = CandidateDeduplicator.deduplicated([duplicate, first])
+
+        XCTAssertEqual(output.count, 1)
+        XCTAssertEqual(output.first?.confidence, 0.95)
+    }
+
+    func testDeduplicatorKeepsIdenticalProductsWhenSpatiallySeparate() {
+        let top = productCandidate(
+            price: "4.99",
+            quantity: "0.5",
+            bounds: CGRect(x: 40, y: 20, width: 120, height: 70),
+            confidence: 0.95
+        )
+        let bottom = productCandidate(
+            price: "4.99",
+            quantity: "0.5",
+            bounds: CGRect(x: 42, y: 180, width: 120, height: 70),
+            confidence: 0.92
+        )
+
+        let output = CandidateDeduplicator.deduplicated([top, bottom])
+
+        XCTAssertEqual(output.count, 2)
+    }
+
+    func testDeduplicatorKeepsDifferentCandidatesEvenWhenOverlapping() {
+        let first = productCandidate(
+            price: "4.99",
+            quantity: "0.5",
+            bounds: CGRect(x: 20, y: 20, width: 120, height: 70)
+        )
+        let second = productCandidate(
+            price: "5.99",
+            quantity: "0.5",
+            bounds: CGRect(x: 24, y: 24, width: 120, height: 70)
+        )
+
+        let output = CandidateDeduplicator.deduplicated([first, second])
+
+        XCTAssertEqual(output.count, 2)
+    }
+
     func testRecognitionStabilizerRequiresContinuousTime() {
         var stabilizer = RecognitionStabilizer(requiredDuration: 0.35)
 
@@ -545,6 +601,24 @@ final class PriceTagParserTests: XCTestCase {
         default:
             XCTFail("Expected different currencies")
         }
+    }
+
+    private func productCandidate(
+        price: String,
+        quantity: String,
+        bounds: CGRect,
+        confidence: Float = 0.9
+    ) -> ProductCandidate {
+        ProductCandidate(
+            id: UUID(),
+            price: Decimal(string: price)!,
+            currencyToken: "€",
+            normalizedQuantity: Decimal(string: quantity)!,
+            dimension: .mass,
+            sourceBounds: bounds,
+            confidence: confidence,
+            rawText: ""
+        )
     }
 
     private func item(
