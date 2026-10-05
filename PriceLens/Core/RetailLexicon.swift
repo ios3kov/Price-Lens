@@ -37,6 +37,15 @@ enum RetailLexicon {
                 continue
             }
 
+            // One-letter alphabetic currency symbols collide with OCR units
+            // such as g and L, so do not infer them from the global locale
+            // catalog. Admit important retail forms explicitly below.
+            if symbol.count == 1,
+               let character = symbol.first,
+               character.isLetter {
+                continue
+            }
+
             values[symbol, default: Set<String>()].insert(code)
         }
 
@@ -67,6 +76,7 @@ enum RetailLexicon {
         ("C$", "CAD"),
         ("S$", "SGD"),
         ("R$", "BRL"),
+        ("R", "ZAR"),
 
         ("د.إ", "AED"),
         ("ر.س", "SAR"),
@@ -339,7 +349,7 @@ enum RetailLexicon {
         let normalized = normalizeUnicode(text)
 
         for (symbol, code) in symbolCurrencies
-        where normalized.localizedCaseInsensitiveContains(symbol) {
+        where currencySymbolOccurs(symbol, in: normalized) {
             return code
         }
 
@@ -399,7 +409,7 @@ enum RetailLexicon {
         }
 
         for (symbol, code) in symbolCurrencies
-        where normalized.localizedCaseInsensitiveContains(symbol) {
+        where currencySymbolOccurs(symbol, in: normalized) {
             // Composite/regional symbols are safer to show canonically.
             return code
         }
