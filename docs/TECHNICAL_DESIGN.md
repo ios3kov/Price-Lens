@@ -81,7 +81,7 @@ Initial strategy:
 - Build a semantic signature from normalized price + quantity + dimension for each candidate.
 - Require the same pair to remain continuously present for at least 350 ms before publishing a result.
 - A changed signature restarts the stabilization timer.
-- Clear the result only after a grace period rather than immediately when one OCR item disappears for a frame.
+- Keep an already-published result for a 300 ms dropout grace period when OCR temporarily loses one or both tags; a generation token cancels the delayed clear if the pair returns.
 
 The 350 ms value is an initial validation parameter and must be tuned on-device if it feels either jumpy or sluggish.
 

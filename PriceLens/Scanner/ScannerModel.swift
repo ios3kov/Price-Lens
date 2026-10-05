@@ -11,6 +11,7 @@ final class ScannerModel: ObservableObject {
 
     private var stabilizer = RecognitionStabilizer()
     private var missingUpdateCount = 0
+    private var dropoutGeneration = 0
 
     func prepareCamera() async {
         cameraState = .preparing
@@ -57,6 +58,7 @@ final class ScannerModel: ObservableObject {
         candidates = deduplicated(candidates)
 
         if candidates.count > 2 {
+            dropoutGeneration += 1
             visibleCandidates = []
             stabilizer.reset()
             missingUpdateCount = 0
@@ -67,12 +69,14 @@ final class ScannerModel: ObservableObject {
         guard candidates.count >= 2 else {
             missingUpdateCount += 1
 
-            // Preserve a valid result through a couple of transient OCR drops.
-            // Live text tracking can briefly lose a line while the camera moves.
-            if case .result = scanState, missingUpdateCount < 3 {
+            if case .result = scanState {
+                scheduleResultDropout(
+                    fallbackCandidates: candidates
+                )
                 return
             }
 
+            dropoutGeneration += 1
             stabilizer.reset()
 
             if candidates.count == 1 {
@@ -81,11 +85,11 @@ final class ScannerModel: ObservableObject {
             } else if missingUpdateCount >= 3 {
                 visibleCandidates = []
                 scanState = .searching
-                stabilizer.reset()
             }
             return
         }
 
+        dropoutGeneration += 1
         missingUpdateCount = 0
 
         // Exactly two valid candidates are required. If there are more, the
@@ -120,8 +124,37 @@ final class ScannerModel: ObservableObject {
     }
 
     func scannerBecameUnavailable(_ message: String) {
+        dropoutGeneration += 1
+        stabilizer.reset()
         visibleCandidates = []
         cameraState = .failed(message)
+    }
+
+    private func scheduleResultDropout(
+        fallbackCandidates: [ProductCandidate]
+    ) {
+        dropoutGeneration += 1
+        let generation = dropoutGeneration
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+
+            guard let self,
+                  self.dropoutGeneration == generation,
+                  case .result = self.scanState else {
+                return
+            }
+
+            self.stabilizer.reset()
+            self.visibleCandidates = fallbackCandidates
+
+            if fallbackCandidates.count == 1 {
+                self.scanState = .oneTagFound
+            } else {
+                self.visibleCandidates = []
+                self.scanState = .searching
+            }
+        }
     }
 
     private func deduplicated(
