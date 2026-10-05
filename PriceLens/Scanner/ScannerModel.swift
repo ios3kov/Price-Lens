@@ -73,6 +73,8 @@ final class ScannerModel: ObservableObject {
                 return
             }
 
+            stabilizer.reset()
+
             if candidates.count == 1 {
                 visibleCandidates = candidates
                 scanState = .oneTagFound
