@@ -23,6 +23,8 @@ The app is split into four boundaries:
 
 2. **Tag grouping**
    - Groups nearby recognized text into candidate shelf labels using geometry.
+   - If nearby labels collapse into one connected cluster, the fallback tests both horizontal and vertical largest-gap splits.
+   - A fallback split is accepted only when both halves independently parse as valid price + quantity candidates.
    - Camera framework types do not leak into parsing logic.
 
 3. **Parsing + comparison core**

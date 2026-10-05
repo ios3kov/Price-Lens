@@ -293,10 +293,10 @@ enum TagClusterer {
         }
 
         if result.count == 1,
-           let split = splitAtLargestHorizontalGap(usable) {
-            // Prefer the spatial split over the mixed mega-cluster. Keeping both
-            // can create a false candidate by pairing a price from one tag with
-            // a quantity from the other.
+           let split = splitMixedCluster(usable) {
+            // Prefer a validated spatial split over a mixed mega-cluster.
+            // Both halves must independently parse as real price-tag candidates,
+            // otherwise keeping the original cluster is safer than guessing.
             return split
         }
 
@@ -311,30 +311,87 @@ enum TagClusterer {
         return expanded.intersects(rhs)
     }
 
-    private static func splitAtLargestHorizontalGap(
+    private enum SplitAxis {
+        case horizontal
+        case vertical
+    }
+
+    private struct SplitCandidate {
+        let clusters: [[ScannedText]]
+        let gap: CGFloat
+    }
+
+    private static func splitMixedCluster(
         _ items: [ScannedText]
     ) -> [[ScannedText]]? {
         guard items.count >= 4 else { return nil }
 
-        let sorted = items.sorted { $0.bounds.midX < $1.bounds.midX }
+        let candidates = [
+            largestGapSplit(
+                items,
+                axis: .horizontal,
+                minimumGap: 64
+            ),
+            largestGapSplit(
+                items,
+                axis: .vertical,
+                minimumGap: 56
+            )
+        ]
+        .compactMap { $0 }
+        .filter { candidate in
+            candidate.clusters.count == 2 &&
+            candidate.clusters.allSatisfy {
+                PriceTagParser.parse(cluster: $0) != nil
+            }
+        }
+
+        return candidates.max(by: { $0.gap < $1.gap })?.clusters
+    }
+
+    private static func largestGapSplit(
+        _ items: [ScannedText],
+        axis: SplitAxis,
+        minimumGap: CGFloat
+    ) -> SplitCandidate? {
+        let coordinate: (ScannedText) -> CGFloat = { item in
+            switch axis {
+            case .horizontal:
+                return item.bounds.midX
+            case .vertical:
+                return item.bounds.midY
+            }
+        }
+
+        let sorted = items.sorted {
+            coordinate($0) < coordinate($1)
+        }
+
         var bestIndex: Int?
         var bestGap: CGFloat = 0
 
         for index in 0..<(sorted.count - 1) {
-            let gap = sorted[index + 1].bounds.midX - sorted[index].bounds.midX
+            let gap = coordinate(sorted[index + 1]) - coordinate(sorted[index])
             if gap > bestGap {
                 bestGap = gap
                 bestIndex = index
             }
         }
 
-        guard let bestIndex, bestGap >= 64 else {
+        guard let bestIndex, bestGap >= minimumGap else {
             return nil
         }
 
-        let left = Array(sorted[0...bestIndex])
-        let right = Array(sorted[(bestIndex + 1)...])
-        guard !left.isEmpty, !right.isEmpty else { return nil }
-        return [left, right]
+        let first = Array(sorted[0...bestIndex])
+        let second = Array(sorted[(bestIndex + 1)...])
+
+        guard !first.isEmpty, !second.isEmpty else {
+            return nil
+        }
+
+        return SplitCandidate(
+            clusters: [first, second],
+            gap: bestGap
+        )
     }
 }

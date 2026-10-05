@@ -189,6 +189,24 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidates.count, 2)
     }
 
+    func testClustererSplitsVerticallyStackedTags() {
+        let items = [
+            item("4.99", x: 30, y: 20, height: 40),
+            item("500 g", x: 30, y: 68, height: 22),
+            item("7.49", x: 32, y: 130, height: 40),
+            item("1 kg", x: 32, y: 178, height: 22)
+        ]
+
+        let clusters = TagClusterer.clusters(from: items)
+        let candidates = clusters.compactMap(PriceTagParser.parse(cluster:))
+
+        XCTAssertEqual(clusters.count, 2)
+        XCTAssertEqual(candidates.count, 2)
+
+        let prices = Set(candidates.map { NSDecimalNumber(decimal: $0.price).stringValue })
+        XCTAssertEqual(prices, Set(["4.99", "7.49"]))
+    }
+
     func testEqualUnitPricesProduceNoWinner() throws {
         let first = try XCTUnwrap(
             PriceTagParser.parse(
