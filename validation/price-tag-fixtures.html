@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Price Lens Camera Fixtures</title>
+  <style>
+    :root { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #202124; color: white; display: grid; grid-template-rows: auto 1fr auto; }
+    header, footer { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #111; }
+    header strong { margin-right: auto; }
+    button { font: inherit; font-weight: 700; padding: 9px 14px; border: 0; border-radius: 999px; cursor: pointer; }
+    main { display: grid; place-items: center; overflow: hidden; padding: 30px; }
+    #fixture { display: flex; gap: 48px; align-items: center; justify-content: center; width: min(1180px, 94vw); min-height: 520px; }
+    .tag { width: 420px; min-height: 300px; background: #fff; color: #111; border: 6px solid #111; border-radius: 8px; padding: 26px 30px; box-shadow: 0 12px 30px #0008; display: flex; flex-direction: column; justify-content: space-between; }
+    .name { font-size: 26px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+    .price { display: flex; align-items: flex-start; font-weight: 950; line-height: .8; margin: 18px 0; font-variant-numeric: tabular-nums; }
+    .price .whole { font-size: 132px; }
+    .price .sep { font-size: 88px; align-self: flex-end; margin-bottom: 6px; }
+    .price .cents { font-size: 72px; padding-top: 3px; }
+    .price .currency { font-size: 34px; padding: 8px 0 0 8px; }
+    .plain-price { font-size: 106px; font-weight: 950; line-height: 1; margin: 18px 0; }
+    .qty { font-size: 38px; font-weight: 850; }
+    .unitprice { font-size: 22px; margin-top: 10px; color: #333; }
+    .three { gap: 20px !important; }
+    .three .tag { width: 310px; min-height: 260px; padding: 20px; }
+    .three .plain-price { font-size: 78px; }
+    footer { justify-content: center; }
+    #expected { display: none; font-weight: 800; }
+    #expected.show { display: inline; }
+    .hint { opacity: .7; font-size: 14px; }
+  </style>
+</head>
+<body>
+<header>
+  <strong>Price Lens — camera validation fixtures</strong>
+  <span id="counter"></span>
+  <button id="prev">← Previous</button>
+  <button id="next">Next →</button>
+</header>
+<main>
+  <div id="fixture"></div>
+</main>
+<footer>
+  <button id="toggleExpected">Show expected</button>
+  <span id="expected"></span>
+  <span class="hint">Maximize this window and keep only the price tags inside Price Lens' dashed frame.</span>
+</footer>
+<script>
+const cases = [
+  {
+    expected: "B ≈25% cheaper per kg",
+    html: `
+      <div class="tag"><div class="name">Product A</div><div class="plain-price">4.99 €</div><div class="qty">500 g</div></div>
+      <div class="tag"><div class="name">Product B</div><div class="plain-price">7.49 €</div><div class="qty">1 kg</div></div>`
+  },
+  {
+    expected: "B ≈11% cheaper per L",
+    html: `
+      <div class="tag"><div class="name">Product A</div><div class="plain-price">2,10 €</div><div class="qty">500 ml</div></div>
+      <div class="tag"><div class="name">Product B</div><div class="plain-price">2,80 €</div><div class="qty">750 ml</div></div>`
+  },
+  {
+    expected: "B ≈25% cheaper per kg; split cents must parse as 4.99",
+    html: `
+      <div class="tag"><div class="name">Split-price A</div><div class="price"><span class="whole">4</span><span class="cents">99</span><span class="currency">€</span></div><div class="qty">500 g</div></div>
+      <div class="tag"><div class="name">Product B</div><div class="plain-price">7.49 €</div><div class="qty">1 kg</div></div>`
+  },
+  {
+    expected: "B ≈25% cheaper per kg; 7.99/kg must NOT become A's package price",
+    html: `
+      <div class="tag"><div class="name">Unit-price trap A</div><div class="plain-price">4.99 €</div><div class="qty">500 g</div><div class="unitprice">7.99 € / kg</div></div>
+      <div class="tag"><div class="name">Product B</div><div class="plain-price">7.49 €</div><div class="qty">1 kg</div></div>`
+  },
+  {
+    className: "three",
+    expected: "Too many price tags — no winner",
+    html: `
+      <div class="tag"><div class="name">A</div><div class="plain-price">1.99 €</div><div class="qty">250 g</div></div>
+      <div class="tag"><div class="name">B</div><div class="plain-price">2.99 €</div><div class="qty">500 g</div></div>
+      <div class="tag"><div class="name">C</div><div class="plain-price">4.99 €</div><div class="qty">1 kg</div></div>`
+  },
+  {
+    expected: "A ≈8% cheaper per kg; 1.500 g must mean 1500 g",
+    html: `
+      <div class="tag"><div class="name">Grouped quantity A</div><div class="plain-price">8.99 €</div><div class="qty">1.500 g</div></div>
+      <div class="tag"><div class="name">Product B</div><div class="plain-price">6.49 €</div><div class="qty">1 kg</div></div>`
+  },
+  {
+    expected: "B ≈25% cheaper per kg; 4 99 € must repair to 4.99",
+    html: `
+      <div class="tag"><div class="name">Missing separator A</div><div class="plain-price">4 99 €</div><div class="qty">500 g</div></div>
+      <div class="tag"><div class="name">Product B</div><div class="plain-price">7.49 €</div><div class="qty">1 kg</div></div>`
+  }
+];
+
+let index = 0;
+const fixture = document.querySelector("#fixture");
+const expected = document.querySelector("#expected");
+const counter = document.querySelector("#counter");
+
+function render() {
+  const c = cases[index];
+  fixture.className = c.className || "";
+  fixture.innerHTML = c.html;
+  expected.textContent = c.expected;
+  expected.classList.remove("show");
+  document.querySelector("#toggleExpected").textContent = "Show expected";
+  counter.textContent = `Case ${index + 1} / ${cases.length}`;
+}
+document.querySelector("#prev").onclick = () => { index = (index - 1 + cases.length) % cases.length; render(); };
+document.querySelector("#next").onclick = () => { index = (index + 1) % cases.length; render(); };
+document.querySelector("#toggleExpected").onclick = (event) => {
+  expected.classList.toggle("show");
+  event.currentTarget.textContent = expected.classList.contains("show") ? "Hide expected" : "Show expected";
+};
+document.addEventListener("keydown", event => {
+  if (event.key === "ArrowLeft") document.querySelector("#prev").click();
+  if (event.key === "ArrowRight") document.querySelector("#next").click();
+});
+render();
+</script>
+</body>
+</html>

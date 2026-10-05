@@ -12,11 +12,14 @@ Point the camera at two price tags. The app recognizes price and package size, n
 
 The initial native iOS MVP is implemented on `feat/initial-mvp`.
 
-Current internally verified source: `61653ae9`
+Current internally verified source: `7baf84b6`
 
-- iOS build: PASS
-- Core tests: 33 / 33 PASS
+- iOS Simulator build: PASS
+- Unsigned iPhone device-target build: PASS
+- Core tests: 65 / 65 PASS
 - Live physical-iPhone camera validation: NOT RUN
 - Public release: not authorized / not performed
 
-See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/VALIDATION.md` and `docs/EVIDENCE_INITIAL_MVP.md`.
+Controlled camera fixtures are in `validation/price-tag-fixtures.html`.
+
+See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/VALIDATION.md`, `docs/IPHONE_VALIDATION.md` and `docs/EVIDENCE_INITIAL_MVP.md`.
