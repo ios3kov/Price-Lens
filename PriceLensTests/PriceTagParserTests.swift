@@ -49,6 +49,59 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.dimension, .volume)
     }
 
+    func testRejectsBareDecimalQuantityAsItsOwnPrice() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("1.50 L", x: 20, y: 20, height: 30)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
+    func testAllowsPriceAndQuantityOnOneLineWhenCurrencyIsExplicit() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("€1.99 500 ml", x: 20, y: 20, height: 34)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "1.99"))
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
+        XCTAssertEqual(candidate.dimension, .volume)
+        XCTAssertEqual(candidate.currencyToken, "€")
+    }
+
+    func testFindsCurrencyOnNeighboringOCRLine() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("1.99", x: 20, y: 20, height: 44),
+                    item("€", x: 120, y: 20, height: 20),
+                    item("500 ml", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.currencyToken, "€")
+    }
+
+    func testParsesItemsCount() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("8.00", x: 20, y: 20, height: 44),
+                    item("10 items", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(10))
+        XCTAssertEqual(candidate.dimension, .count)
+    }
+
     func testPrefersPackagePriceOverUnitPriceLine() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(
