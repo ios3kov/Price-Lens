@@ -1,9 +1,10 @@
 # Device QA — Price Lens Validation Candidate
 
-Candidate source: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
+Current retest candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013`
+Historical physical candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
 Baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 
-All runtime results default to NOT_RUN until observed on the physical iPhone.
+All rows in the main table refer to the current retest candidate and default to NOT_RUN until observed on the physical iPhone. Historical results for `8450963d` are retained below.
 
 | ID | Scenario | Expected | Status | Evidence / issue |
 | --- | --- | --- | --- | --- |

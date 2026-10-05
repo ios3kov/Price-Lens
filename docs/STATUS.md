@@ -11,7 +11,7 @@ camera -> on-device OCR -> exactly two price-tag candidates -> unit normalizatio
 - Repository: ios3kov/Price-Lens
 - Working branch: feat/initial-mvp
 - Last physically launched candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
-- Next validation candidate: pending UI-fix commit + fresh CI
+- Current validation candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013`
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -77,11 +77,25 @@ The screenshot showed large black letterbox areas, an oversized technical-lookin
 
 This is a blocking UX finding for the current Validation milestone. The OCR/core implementation is retained; the presentation/scanner sizing is being revised under the existing product contract.
 
+## UI-fix pre-handoff verification
+
+For candidate `a2d9d9e0`:
+
+- GitHub Actions run: `37321046482`
+- Xcode 16.4
+- Swift 6.1.2
+- iOS Simulator build: PASS
+- unsigned iPhone device-target build: PASS
+- bundle identity: PASS — `com.os3kov.PriceLens 0.1.0 (1)`
+- bundled privacy manifest / reason `35F9.1`: PASS
+- core tests: PASS — 65 executed, 0 failures
+- physical first-screen UX retest: NOT_RUN
+
 ## Remaining blocker
 
 The live camera workflow is **not yet validated on a physical iPhone** after the UX fix.
 
-Next required step: use `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` to build and install the exact clean candidate `8450963d` through local Xcode signing, record the installed identity in `docs/BUILD_IDENTITY_VALIDATION.md`, then execute `docs/DEVICE_QA.md`: controlled fixtures first, real shelf labels second.
+Next required step: use `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` to build and install the exact clean candidate `a2d9d9e0` through local Xcode signing, record the installed identity in `docs/BUILD_IDENTITY_VALIDATION.md`, then execute `docs/DEVICE_QA.md`: controlled fixtures first, real shelf labels second.
 
 Blocking runtime failures include any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result, inaccessible critical recovery/result state, unexpected data flow, or unrecoverable camera state.
 
@@ -115,7 +129,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 - Physical iPhone camera, overlay, lifecycle, accessibility, timing and real-shelf checks remain NOT_RUN and are the purpose of the Validation phase.
 - App Store metadata, final privacy labels/policy URLs, archive/export and submission checks belong to Release and are not claimed by this Validation milestone.
 - Merge / public release remain unauthorized.
-- Current claim: **candidate 8450963d passed pre-handoff checks and launched physically, but its first-use scanning UX failed user validation; a new UI candidate must pass fresh CI and repeat the physical run.**
+- Current claim: **candidate 8450963d remains historical physical evidence with D28 UX FAIL; replacement candidate a2d9d9e0 passes fresh pre-handoff CI and must now repeat physical D01/D28 plus affected scanner/accessibility checks.**
 
 ## Release-only open scope
 

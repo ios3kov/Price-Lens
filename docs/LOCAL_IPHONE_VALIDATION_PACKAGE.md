@@ -2,13 +2,13 @@
 
 ## Exact candidate
 
-- Source commit to build: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
+- Source commit to build: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013`
 - Bundle ID: `com.os3kov.PriceLens`
 - Version/build: `0.1.0 (1)`
 - Channel: local Xcode signed install
 - Standard: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 
-Do not build the validation app from a different production-source commit and call it the same candidate.
+This candidate replaces the physically tested `8450963d` because that candidate failed first-use UX validation. Do not build from a different production-source commit and call it the same candidate.
 
 ## Local preparation
 
@@ -16,7 +16,7 @@ From the existing local repository or a clean clone:
 
 ```bash
 git fetch origin
-git checkout 8450963dc1db139d2bed9e1b3fea3e0a3236ae06
+git checkout a2d9d9e0f6c2536335f19deecd7b12b9d4c98013
 git status --short
 git rev-parse HEAD
 xcodebuild -version
