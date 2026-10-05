@@ -21,10 +21,7 @@ enum RetailLexicon {
         ("C$", "CAD"),
         ("S$", "SGD"),
         ("R$", "BRL"),
-        ("CHF", "CHF"),
-        ("Kč", "CZK"),
-        ("zł", "PLN"),
-        ("kr", "KR"),
+
         ("د.إ", "AED"),
         ("ر.س", "SAR"),
         ("﷼", "IRR"),
@@ -64,7 +61,10 @@ enum RetailLexicon {
         "ТЕНГЕ": "KZT",
         "ЛАРИ": "GEL",
         "МАНАТ": "AZN",
-        "KM": "BAM"
+        "KM": "BAM",
+        "KČ": "CZK",
+        "ZŁ": "PLN",
+        "KR": "KR"
     ]
 
     private static let unitDefinitions: [String: UnitDefinition] = {
@@ -85,17 +85,25 @@ enum RetailLexicon {
         }
 
         add(
-            ["kg", "kgs", "kilogram", "kilograms", "кг", "килограмм", "килограмма", "килограммов"],
+            [
+                "kg", "kgs", "kilogram", "kilograms",
+                "кг", "килограмм", "килограмма", "килограммов",
+                "公斤", "千克", "킬로그램", "كجم", "كيلوغرام"
+            ],
             dimension: .mass,
             multiplier: 1
         )
         add(
-            ["g", "gr", "gram", "grams", "гр", "г", "грамм", "грамма", "граммов"],
+            [
+                "g", "gr", "gram", "grams",
+                "гр", "г", "грамм", "грамма", "граммов",
+                "克", "그램", "غ", "جرام"
+            ],
             dimension: .mass,
             multiplier: Decimal(string: "0.001")!
         )
         add(
-            ["mg", "мг"],
+            ["mg", "мг", "毫克", "밀리그램", "مغ"],
             dimension: .mass,
             multiplier: Decimal(string: "0.000001")!
         )
@@ -111,7 +119,11 @@ enum RetailLexicon {
         )
 
         add(
-            ["l", "lt", "liter", "liters", "litre", "litres", "л", "литр", "литра", "литров"],
+            [
+                "l", "lt", "liter", "liters", "litre", "litres",
+                "л", "литр", "литра", "литров",
+                "升", "리터", "لتر"
+            ],
             dimension: .volume,
             multiplier: 1
         )
@@ -126,7 +138,11 @@ enum RetailLexicon {
             multiplier: Decimal(string: "0.01")!
         )
         add(
-            ["ml", "milliliter", "milliliters", "millilitre", "millilitres", "мл", "миллилитр", "миллилитров"],
+            [
+                "ml", "milliliter", "milliliters", "millilitre", "millilitres",
+                "мл", "миллилитр", "миллилитров",
+                "毫升", "밀리리터", "مل"
+            ],
             dimension: .volume,
             multiplier: Decimal(string: "0.001")!
         )
@@ -134,7 +150,8 @@ enum RetailLexicon {
         add(
             [
                 "item", "items", "pc", "pcs", "piece", "pieces",
-                "ea", "each", "ct", "count", "шт", "штук", "ед", "единиц"
+                "ea", "each", "ct", "count", "шт", "штук", "ед", "единиц",
+                "个", "個", "件", "개", "قطعة"
             ],
             dimension: .count,
             multiplier: 1
@@ -214,6 +231,7 @@ enum RetailLexicon {
         case "THB": return "฿"
         case "NGN": return "₦"
         case "JPY": return "¥"
+        case "BAM": return "KM"
         case "$": return "$"
         default: return canonical.uppercased()
         }
@@ -235,11 +253,28 @@ enum RetailLexicon {
     static func normalizeUnicode(
         _ text: String
     ) -> String {
-        text
-            .precomposedStringWithCompatibilityMapping
+        let compatibility =
+            text.precomposedStringWithCompatibilityMapping
+
+        let asciiDigits = compatibility.map { character -> String in
+            if let value = character.wholeNumberValue,
+               (0...9).contains(value) {
+                return String(value)
+            }
+
+            return String(character)
+        }
+        .joined()
+
+        return asciiDigits
             .replacingOccurrences(of: "\u{00A0}", with: " ")
             .replacingOccurrences(of: "\u{202F}", with: " ")
             .replacingOccurrences(of: "\u{2009}", with: " ")
+            .replacingOccurrences(of: "\u{200E}", with: "")
+            .replacingOccurrences(of: "\u{200F}", with: "")
+            .replacingOccurrences(of: "\u{061C}", with: "")
+            .replacingOccurrences(of: "٫", with: ".")
+            .replacingOccurrences(of: "٬", with: ",")
             .replacingOccurrences(of: "−", with: "-")
             .replacingOccurrences(of: "—", with: "-")
             .replacingOccurrences(of: "–", with: "-")

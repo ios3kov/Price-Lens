@@ -1149,6 +1149,93 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertNil(candidate)
     }
 
+    func testParsesArabicIndicDigitsAndSeparators() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("د.إ ١٢٫٥٠", x: 20, y: 20, width: 150, height: 44),
+                    item("٥٠٠ g", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "12.50"))
+        XCTAssertEqual(candidate.currencyToken, "AED")
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
+    }
+
+    func testParsesIndianGrouping() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("₹1,29,999.00", x: 20, y: 20, width: 190, height: 44),
+                    item("1 kg", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "129999.00"))
+        XCTAssertEqual(candidate.currencyToken, "₹")
+    }
+
+    func testParsesApostropheGrouping() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("CHF 1’299.95", x: 20, y: 20, width: 190, height: 44),
+                    item("1 kg", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "1299.95"))
+        XCTAssertEqual(candidate.currencyToken, "CHF")
+    }
+
+    func testParsesCurrencyAsDecimalSeparator() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("12€50", x: 20, y: 20, width: 120, height: 44),
+                    item("500 g", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "12.50"))
+        XCTAssertEqual(candidate.currencyToken, "€")
+    }
+
+    func testParsesChineseMassUnit() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("¥99", x: 20, y: 20, width: 100, height: 44),
+                    item("500 克", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(99))
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
+        XCTAssertEqual(candidate.dimension, .mass)
+    }
+
+    func testParsesArabicMassUnit() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("ر.س 12.50", x: 20, y: 20, width: 140, height: 44),
+                    item("500 غ", x: 20, y: 72, width: 100, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(string: "12.50"))
+        XCTAssertEqual(candidate.currencyToken, "SAR")
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
+    }
+
     func testComparisonSessionAddsAndRanksMultipleItems() {
         var session = ComparisonSession()
 

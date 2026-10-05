@@ -145,8 +145,45 @@ enum PriceTagParser {
         in text: String,
         currency: String?
     ) -> Decimal? {
-        let groupedDecimalPattern = #"(?<!\d)(\d{1,3}(?:[\s\.,]\d{3})+[\.,]\d{2})(?!\d)"#
-        let decimalPattern = #"(?<!\d)(\d{1,4}[\.,]\d{2})(?!\d)"#
+        let currencyPattern =
+            "(?:" + RetailLexicon.currencyRegexAlternation + ")"
+
+        // CLDR permits the currency symbol before, after, or in the decimal
+        // position (for example 12€50).
+        let currencyAsDecimalPattern =
+            #"(?i)(?<!\d)(\d{1,9})\s*"# + currencyPattern
+            + #"\s*(\d{2})(?!\d)"#
+
+        if let match = firstMatch(
+            pattern: currencyAsDecimalPattern,
+            in: text
+        ),
+           let wholeRaw = capturedString(
+            match,
+            group: 1,
+            text: text
+           ),
+           let centsRaw = capturedString(
+            match,
+            group: 2,
+            text: text
+           ),
+           let whole = Decimal(
+            string: wholeRaw,
+            locale: Locale(identifier: "en_US_POSIX")
+           ),
+           let cents = Decimal(
+            string: centsRaw,
+            locale: Locale(identifier: "en_US_POSIX")
+           ) {
+            return whole + (cents / 100)
+        }
+
+        // Accept Western, Indian and apostrophe/space grouping styles.
+        let groupedDecimalPattern =
+            #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+[\.,]\d{2})(?!\d)"#
+        let decimalPattern =
+            #"(?<!\d)(\d{1,9}[\.,]\d{2})(?!\d)"#
 
         for pattern in [groupedDecimalPattern, decimalPattern] {
             if let match = firstMatch(pattern: pattern, in: text),
@@ -157,8 +194,10 @@ enum PriceTagParser {
         }
 
         // Common European zero-cents notation: 4,- / 4.- / 4.–
-        let groupedZeroCentsPattern = #"(?<!\d)(\d{1,3}(?:[\s\.,]\d{3})+)\s*[\.,]\s*[-–—](?!\d)"#
-        let zeroCentsPattern = #"(?<!\d)(\d{1,4})\s*[\.,]\s*[-–—](?!\d)"#
+        let groupedZeroCentsPattern =
+            #"(?<!\d)(\d{1,3}(?:[\s\.,'’]\d{2,3})+)\s*[\.,]\s*-(?!\d)"#
+        let zeroCentsPattern =
+            #"(?<!\d)(\d{1,9})\s*[\.,]\s*-(?!\d)"#
 
         for pattern in [groupedZeroCentsPattern, zeroCentsPattern] {
             if let match = firstMatch(pattern: pattern, in: text),
@@ -171,7 +210,8 @@ enum PriceTagParser {
         // OCR can occasionally drop the decimal separator and return "4 99".
         // Only repair that form when a currency marker disambiguates it.
         if currency != nil {
-            let missingSeparatorPattern = #"(?<!\d)(\d{1,4})\s+(\d{2})(?!\d)"#
+            let missingSeparatorPattern =
+                #"(?<!\d)(\d{1,9})\s+(\d{2})(?!\d)"#
             if let match = firstMatch(
                 pattern: missingSeparatorPattern,
                 in: text
@@ -206,7 +246,7 @@ enum PriceTagParser {
 
         // If currency came from a nearby standalone OCR fragment, a bare
         // integer such as "4" is a valid package price.
-        let bareIntegerPattern = #"^\s*(\d{1,4})\s*$"#
+        let bareIntegerPattern = #"^\s*(\d{1,9})\s*$"#
         if let match = firstMatch(
             pattern: bareIntegerPattern,
             in: text
@@ -223,9 +263,8 @@ enum PriceTagParser {
             return value
         }
 
-        let currencyPattern =
-            "(?:" + RetailLexicon.currencyRegexAlternation + ")"
-        let groupedNumber = #"(\d{1,3}(?:[\s\.,]\d{3})+)"#
+        let groupedNumber =
+            #"(\d{1,3}(?:[\s\.,'’]\d{2,3})+)"#
         let groupedPrefixed = #"(?i)"# + currencyPattern + #"\s*"# + groupedNumber
         let groupedSuffixed = #"(?i)(?<!\d)"# + groupedNumber + #"\s*"# + currencyPattern
 
@@ -237,8 +276,10 @@ enum PriceTagParser {
             }
         }
 
-        let prefixed = #"(?i)"# + currencyPattern + #"\s*(\d{1,4})(?![\d\.,])"#
-        let suffixed = #"(?i)(?<![\d\.,])(\d{1,4})\s*"# + currencyPattern
+        let prefixed =
+            #"(?i)"# + currencyPattern + #"\s*(\d{1,9})(?![\d\.,])"#
+        let suffixed =
+            #"(?i)(?<![\d\.,])(\d{1,9})\s*"# + currencyPattern
 
         for pattern in [prefixed, suffixed] {
             if let match = firstMatch(pattern: pattern, in: text),
@@ -262,7 +303,7 @@ enum PriceTagParser {
                   !containsAnySupportedUnit(lower),
                   let value = plainIntegerValue(
                     in: item.transcript,
-                    digits: 1...4
+                    digits: 1...9
                   ) else {
                 return nil
             }
@@ -406,7 +447,8 @@ enum PriceTagParser {
         let text = RetailLexicon.normalizeUnicode(item.transcript)
         let lower = text.lowercased()
 
-        if RetailLexicon.looksLikeReferenceUnitPrice(lower) {
+        if RetailLexicon.looksLikeReferenceUnitPrice(lower) ||
+            RetailLexicon.looksLikePackagePriceSuffix(lower) {
             return nil
         }
 
@@ -633,6 +675,8 @@ enum PriceTagParser {
     ) -> Decimal? {
         let normalized = RetailLexicon.normalizeUnicode(raw)
             .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "’", with: "")
             .replacingOccurrences(of: ".", with: "")
             .replacingOccurrences(of: ",", with: "")
 
@@ -645,6 +689,8 @@ enum PriceTagParser {
     private static func decimal(_ raw: String) -> Decimal? {
         var value = RetailLexicon.normalizeUnicode(raw)
             .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "’", with: "")
 
         if value.contains(","), value.contains(".") {
             let comma = value.lastIndex(of: ",")
@@ -749,12 +795,41 @@ enum TagClusterer {
         .compactMap { $0 }
         .filter { candidate in
             candidate.clusters.count == 2 &&
-            candidate.clusters.allSatisfy {
-                PriceTagParser.parse(cluster: $0) != nil
-            }
+            candidate.clusters.allSatisfy(isResolvableSegment)
         }
 
         return candidates.max(by: { $0.gap < $1.gap })?.clusters
+    }
+
+    private static func isResolvableSegment(
+        _ items: [ScannedText]
+    ) -> Bool {
+        if PriceTagParser.parse(cluster: items) != nil {
+            return true
+        }
+
+        guard items.count >= 4 else {
+            return false
+        }
+
+        let nestedCandidates = [
+            largestGapSplit(
+                items,
+                axis: .horizontal,
+                minimumGap: 64
+            ),
+            largestGapSplit(
+                items,
+                axis: .vertical,
+                minimumGap: 56
+            )
+        ]
+        .compactMap { $0 }
+
+        return nestedCandidates.contains { candidate in
+            candidate.clusters.count == 2 &&
+            candidate.clusters.allSatisfy(isResolvableSegment)
+        }
     }
 
     private static func largestGapSplit(
