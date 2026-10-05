@@ -330,7 +330,7 @@ enum RetailLexicon {
         return values
     }()
 
-    static var currencyRegexAlternation: String {
+    static let currencyRegexAlternation: String = {
         var aliases = symbolCurrencies.map(\.0)
         aliases.append(contentsOf: localeCurrencySymbols)
         aliases.append("$")
@@ -341,7 +341,7 @@ enum RetailLexicon {
             .sorted { $0.count > $1.count }
             .map(NSRegularExpression.escapedPattern(for:))
             .joined(separator: "|")
-    }
+    }()
 
     static func canonicalCurrency(
         in text: String
@@ -499,30 +499,30 @@ enum RetailLexicon {
         return unitDefinitions[key]
     }
 
-    static var unitRegexAlternation: String {
+    static let unitRegexAlternation: String = {
         unitDefinitions.keys
             .sorted { $0.count > $1.count }
             .map(NSRegularExpression.escapedPattern(for:))
             .joined(separator: "|")
-    }
+    }()
 
-    static var referenceUnitRegexAlternation: String {
+    static let referenceUnitRegexAlternation: String = {
         unitDefinitions
             .filter { $0.value.dimension != .count }
             .keys
             .sorted { $0.count > $1.count }
             .map(NSRegularExpression.escapedPattern(for:))
             .joined(separator: "|")
-    }
+    }()
 
-    static var countUnitRegexAlternation: String {
+    static let countUnitRegexAlternation: String = {
         unitDefinitions
             .filter { $0.value.dimension == .count }
             .keys
             .sorted { $0.count > $1.count }
             .map(NSRegularExpression.escapedPattern(for:))
             .joined(separator: "|")
-    }
+    }()
 
     static func normalizeUnicode(
         _ text: String
