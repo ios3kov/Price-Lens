@@ -89,15 +89,20 @@ enum PriceTagParser {
         var score = Double(item.confidence) * 2.0
         score += min(Double(item.bounds.height / 24.0), 2.0)
 
-        if currency != nil {
-            score += 2.0
+        // Unit-price lines are reference prices, not the package price.
+        // Never allow them to win just because they also contain a currency.
+        if containsUnitPriceCue(lower) {
+            return nil
         }
 
-        if containsUnitPriceCue(lower) {
-            score -= 3.0
-        } else if containsAnySupportedUnit(lower) {
-            // A line like "1.50 kg" is more likely quantity than price.
-            score -= 1.5
+        // A line like "1.50 L" is quantity, not price. One-line
+        // price+quantity is accepted only when currency makes the price explicit.
+        if containsAnySupportedUnit(lower), currency == nil {
+            return nil
+        }
+
+        if currency != nil {
+            score += 2.0
         }
 
         return PriceMatch(

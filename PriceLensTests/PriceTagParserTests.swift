@@ -155,6 +155,28 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertNil(candidate)
     }
 
+    func testRejectsCurrencyUnitPriceAsPackagePrice() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("€7.99 / kg", x: 20, y: 20, height: 22),
+                item("500 g", x: 20, y: 58, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
+    func testRejectsQuantityLikeDecimalAsPriceWhenOtherQuantityExists() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("1.50 L", x: 20, y: 20, height: 30),
+                item("500 g", x: 20, y: 64, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
     func testAllowsPriceAndQuantityOnOneLineWhenCurrencyIsExplicit() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(
