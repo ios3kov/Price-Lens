@@ -1236,6 +1236,162 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
     }
 
+    func testCandidateExtractorFallsBackToWholeSingleLabelROI() throws {
+        let items = [
+            item(
+                "315г",
+                x: 24,
+                y: 24,
+                width: 70,
+                height: 22
+            ),
+            item(
+                "56",
+                x: 180,
+                y: 110,
+                width: 120,
+                height: 88
+            ),
+            item(
+                "99",
+                x: 304,
+                y: 130,
+                width: 42,
+                height: 32
+            ),
+            item(
+                "р/шт.",
+                x: 350,
+                y: 142,
+                width: 72,
+                height: 24
+            )
+        ]
+
+        XCTAssertGreaterThan(
+            TagClusterer.clusters(from: items).count,
+            1
+        )
+
+        let candidates = CandidateExtractor.candidates(
+            from: items
+        )
+
+        let candidate = try XCTUnwrap(candidates.first)
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(
+            candidate.price,
+            Decimal(string: "56.99")
+        )
+        XCTAssertEqual(candidate.currencyToken, "₽")
+        XCTAssertEqual(
+            candidate.normalizedQuantity,
+            Decimal(string: "0.315")
+        )
+    }
+
+    func testCandidateExtractorHandlesSeparateCurrencySuffixFragment() throws {
+        let items = [
+            item(
+                "315г",
+                x: 18,
+                y: 18,
+                width: 74,
+                height: 22
+            ),
+            item(
+                "78",
+                x: 320,
+                y: 20,
+                width: 42,
+                height: 24
+            ),
+            item(
+                "99",
+                x: 365,
+                y: 24,
+                width: 22,
+                height: 14
+            ),
+            item(
+                "56",
+                x: 165,
+                y: 86,
+                width: 120,
+                height: 88
+            ),
+            item(
+                "99",
+                x: 292,
+                y: 108,
+                width: 40,
+                height: 30
+            ),
+            item(
+                "р/шт.",
+                x: 336,
+                y: 118,
+                width: 76,
+                height: 22
+            )
+        ]
+
+        let candidate = try XCTUnwrap(
+            CandidateExtractor.candidates(
+                from: items
+            ).first
+        )
+
+        XCTAssertEqual(
+            candidate.price,
+            Decimal(string: "56.99")
+        )
+        XCTAssertEqual(candidate.currencyToken, "₽")
+        XCTAssertEqual(
+            candidate.normalizedQuantity,
+            Decimal(string: "0.315")
+        )
+    }
+
+    func testCandidateExtractorDoesNotCollapseTwoCompleteLabels() {
+        let items = [
+            item(
+                "€4.99",
+                x: 10,
+                y: 20,
+                width: 90,
+                height: 40
+            ),
+            item(
+                "500 g",
+                x: 10,
+                y: 68,
+                width: 90,
+                height: 22
+            ),
+            item(
+                "€7.49",
+                x: 240,
+                y: 20,
+                width: 90,
+                height: 40
+            ),
+            item(
+                "1 kg",
+                x: 240,
+                y: 68,
+                width: 90,
+                height: 22
+            )
+        ]
+
+        let candidates = CandidateExtractor.candidates(
+            from: items
+        )
+
+        XCTAssertEqual(candidates.count, 2)
+    }
+
     func testComparisonSessionAddsAndRanksMultipleItems() {
         var session = ComparisonSession()
 

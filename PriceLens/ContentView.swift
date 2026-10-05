@@ -289,10 +289,8 @@ struct ContentView: View {
             )
 
         case .textFound:
-            InstructionCard(
-                symbol: "text.viewfinder",
-                title: "Text found",
-                detail: "Looking for a price and pack size…"
+            TextFoundCard(
+                lines: scannerModel.recognizedLines
             )
 
         case .reading:
@@ -420,6 +418,56 @@ struct ContentView: View {
             .stroke(.white.opacity(0.12), lineWidth: 1)
         )
         .padding(.horizontal, 24)
+    }
+}
+
+private struct TextFoundCard: View {
+    let lines: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(
+                "Text found",
+                systemImage: "text.viewfinder"
+            )
+            .font(.headline)
+
+            Text("Need a price + pack size")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.68))
+
+            if !lines.isEmpty {
+                Text(lines.joined(separator: "  ·  "))
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.white.opacity(0.78))
+                    .lineLimit(3)
+                    .fixedSize(
+                        horizontal: false,
+                        vertical: true
+                    )
+            }
+        }
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
+        )
+        .foregroundStyle(.white)
+        .padding(14)
+        .background(
+            .black.opacity(0.70),
+            in: RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+            .stroke(.white.opacity(0.12), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
     }
 }
 

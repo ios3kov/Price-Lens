@@ -341,6 +341,14 @@ enum PriceTagParser {
                 let combinedTranscript = wholeItem.transcript + "." + fractionItem.transcript
                 let currency = currencyToken(in: wholeItem.transcript)
                     ?? currencyToken(in: fractionItem.transcript)
+                    ?? nearbyCurrencyToken(
+                        for: fractionItem,
+                        in: items
+                    )
+                    ?? nearbyCurrencyToken(
+                        for: wholeItem,
+                        in: items
+                    )
 
                 var score =
                     Double(min(wholeItem.confidence, fractionItem.confidence)) * 2.0
@@ -865,5 +873,32 @@ enum TagClusterer {
             clusters: [first, second],
             gap: bestGap
         )
+    }
+}
+
+
+enum CandidateExtractor {
+    static func candidates(
+        from items: [ScannedText]
+    ) -> [ProductCandidate] {
+        let clustered = CandidateDeduplicator.deduplicated(
+            TagClusterer.clusters(from: items)
+                .compactMap(PriceTagParser.parse(cluster:))
+        )
+
+        if !clustered.isEmpty {
+            return clustered
+        }
+
+        // Single-label ROI fallback: OCR can separate product quantity,
+        // large whole price, cents, and currency into disconnected groups.
+        // The parser's ambiguity gate still prevents unsafe guessing.
+        guard let aggregate = PriceTagParser.parse(
+            cluster: items
+        ) else {
+            return []
+        }
+
+        return [aggregate]
     }
 }

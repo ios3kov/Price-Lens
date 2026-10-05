@@ -9,6 +9,7 @@ final class ScannerModel: ObservableObject {
     @Published private(set) var scanState: ScanState = .searching
     @Published private(set) var currentCandidate: ProductCandidate?
     @Published private(set) var comparisonItems: [ProductCandidate] = []
+    @Published private(set) var recognizedLines: [String] = []
 
     private var stabilizer = RecognitionStabilizer()
     private var session = ComparisonSession()
@@ -56,9 +57,10 @@ final class ScannerModel: ObservableObject {
     }
 
     func receive(_ items: [ScannedText]) {
-        let candidates = CandidateDeduplicator.deduplicated(
-            TagClusterer.clusters(from: items)
-                .compactMap(PriceTagParser.parse(cluster:))
+        recognizedLines = Self.recognizedLines(from: items)
+
+        let candidates = CandidateExtractor.candidates(
+            from: items
         )
 
         guard candidates.count <= 1 else {
@@ -174,7 +176,36 @@ final class ScannerModel: ObservableObject {
         stabilizer.reset()
         missingUpdateCount = 0
         currentCandidate = nil
+        recognizedLines = []
         scanState = .searching
+    }
+
+    private static func recognizedLines(
+        from items: [ScannedText]
+    ) -> [String] {
+        var seen = Set<String>()
+
+        return items
+            .filter { $0.confidence >= 0.35 }
+            .sorted {
+                let yDelta = abs(
+                    $0.bounds.midY - $1.bounds.midY
+                )
+                if yDelta < 12 {
+                    return $0.bounds.minX < $1.bounds.minX
+                }
+                return $0.bounds.minY < $1.bounds.minY
+            }
+            .map {
+                $0.transcript.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+            }
+            .filter {
+                !$0.isEmpty && seen.insert($0).inserted
+            }
+            .prefix(8)
+            .map { String($0.prefix(48)) }
     }
 
     private func reevaluateCurrentCandidate() {
