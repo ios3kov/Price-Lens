@@ -87,6 +87,84 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(candidate.unitPrice, Decimal(string: "9.98"))
     }
 
+    func testParsesIntegerPriceWithSuffixCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4 €", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(4))
+        XCTAssertEqual(candidate.currencyToken, "€")
+    }
+
+    func testParsesIntegerPriceWithPrefixCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("€ 4", x: 20, y: 20, height: 44),
+                    item("1 kg", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(4))
+    }
+
+    func testParsesEuropeanZeroCentsPrice() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4,- €", x: 20, y: 20, height: 44),
+                    item("500 ml", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(4))
+        XCTAssertEqual(candidate.dimension, .volume)
+    }
+
+    func testParsesEnDashZeroCentsWithoutCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.–", x: 20, y: 20, height: 44),
+                    item("500 g", x: 20, y: 70, height: 24)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(4))
+    }
+
+    func testIntegerCurrencyPriceUsesNumberAdjacentToCurrency() throws {
+        let candidate = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("500 ml €4", x: 20, y: 20, height: 34)
+                ]
+            )
+        )
+
+        XCTAssertEqual(candidate.price, Decimal(4))
+        XCTAssertEqual(candidate.normalizedQuantity, Decimal(string: "0.5"))
+    }
+
+    func testRejectsBareIntegerPriceWithoutCentsOrCurrency() {
+        let candidate = PriceTagParser.parse(
+            cluster: [
+                item("4", x: 20, y: 20, height: 44),
+                item("500 g", x: 20, y: 70, height: 24)
+            ]
+        )
+
+        XCTAssertNil(candidate)
+    }
+
     func testParsesPriceSplitIntoWholeAndCentsOCRItems() throws {
         let candidate = try XCTUnwrap(
             PriceTagParser.parse(

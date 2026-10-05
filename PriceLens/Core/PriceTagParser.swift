@@ -75,15 +75,12 @@ enum PriceTagParser {
 
     private static func priceMatch(_ item: ScannedText) -> PriceMatch? {
         let text = item.transcript
-        let pattern = #"(?<!\d)(\d{1,4}[\.,]\d{2})(?!\d)"#
+        let currency = currencyToken(in: text)
 
-        guard let match = firstMatch(pattern: pattern, in: text),
-              let range = Range(match.range(at: 1), in: text),
-              let value = decimal(String(text[range])) else {
+        guard let value = priceValue(in: text, currency: currency) else {
             return nil
         }
 
-        let currency = currencyToken(in: text)
         let lower = text.lowercased()
 
         var score = Double(item.confidence) * 2.0
@@ -111,6 +108,51 @@ enum PriceTagParser {
             score: score,
             source: item
         )
+    }
+
+    private static func priceValue(
+        in text: String,
+        currency: String?
+    ) -> Decimal? {
+        let decimalPattern = #"(?<!\d)(\d{1,4}[\.,]\d{2})(?!\d)"#
+
+        if let match = firstMatch(pattern: decimalPattern, in: text),
+           let raw = capturedString(match, group: 1, text: text),
+           let value = decimal(raw) {
+            return value
+        }
+
+        // Common European zero-cents notation: 4,- / 4.- / 4.–
+        let zeroCentsPattern = #"(?<!\d)(\d{1,4})\s*[\.,]\s*[-–—](?!\d)"#
+        if let match = firstMatch(pattern: zeroCentsPattern, in: text),
+           let raw = capturedString(match, group: 1, text: text) {
+            return Decimal(
+                string: raw,
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+        }
+
+        // Integer-only prices are accepted only when the currency is directly
+        // adjacent, so "500 ml €4" yields 4 rather than 500.
+        guard currency != nil else {
+            return nil
+        }
+
+        let currencyPattern = #"(?:€|\$|£|EUR|USD|GBP|BAM|KM)"#
+        let prefixed = #"(?i)"# + currencyPattern + #"\s*(\d{1,4})(?![\d\.,])"#
+        let suffixed = #"(?i)(?<![\d\.,])(\d{1,4})\s*"# + currencyPattern
+
+        for pattern in [prefixed, suffixed] {
+            if let match = firstMatch(pattern: pattern, in: text),
+               let raw = capturedString(match, group: 1, text: text) {
+                return Decimal(
+                    string: raw,
+                    locale: Locale(identifier: "en_US_POSIX")
+                )
+            }
+        }
+
+        return nil
     }
 
     private static func splitPriceMatches(
