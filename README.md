@@ -2,7 +2,7 @@
 
 **Price Lens** is an iPhone app that compares products by their real unit price using only the camera.
 
-Point the camera at two price tags. The app recognizes price and package size, normalizes them to kg / L / item, and shows which option is actually cheaper.
+Scan one price label, review what Price Lens recognized, tap Add, then scan the next. Add as many compatible products as you need; Price Lens normalizes them to kg / L / item and keeps the best value highlighted.
 
 ## Product principle
 
@@ -12,16 +12,16 @@ Point the camera at two price tags. The app recognizes price and package size, n
 
 The initial native iOS MVP is implemented on `feat/initial-mvp`.
 
-Current AS 4.1 validation candidate: `a2d9d9e0`
+Current AS 4.1 multi-item validation candidate: `d33616b9`
 
 - iOS Simulator build: PASS
 - Unsigned iPhone device-target build: PASS
-- Core tests: 65 / 65 PASS
+- Core tests: 70 / 70 PASS
 - Device bundle identity + privacy manifest CI check: PASS
-- Previous physical candidate `8450963d`: launched, first-use UX FAIL
-- Current UI-fix physical retest: NOT RUN
+- Physical candidates `8450963d` and `a2d9d9e0`: launched, workflow UX FAIL
+- Multi-item physical retest: NOT RUN
 - Public release: not authorized / not performed
 
-Controlled camera fixtures are in `validation/price-tag-fixtures.html`.
+Controlled multi-item camera fixtures are in `validation/multi-item-fixtures.html`.
 
-See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/PRIVACY.md`, `docs/ACCESSIBILITY.md`, `docs/VALIDATION.md`, `docs/IPHONE_VALIDATION.md`, `docs/BUILD_IDENTITY_VALIDATION.md`, `docs/DEVICE_QA.md`, `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` and `docs/EVIDENCE_AS_4_1_VALIDATION_PREP.md`.
+See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/PRIVACY.md`, `docs/ACCESSIBILITY.md`, `docs/DEVICE_QA.md`, `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md`, `docs/BUILD_IDENTITY_MULTI_ITEM.md` and `docs/EVIDENCE_MULTI_ITEM_VALIDATION_PREP.md`.

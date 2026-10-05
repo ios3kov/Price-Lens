@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Price Lens Multi-item Camera Fixtures</title>
+  <style>
+    :root { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #202124; color: white; display: grid; grid-template-rows: auto 1fr auto; }
+    header, footer { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #111; }
+    header strong { margin-right: auto; }
+    button { font: inherit; font-weight: 700; padding: 9px 14px; border: 0; border-radius: 999px; cursor: pointer; }
+    main { display: grid; place-items: center; overflow: hidden; padding: 30px; }
+    .tag { width: min(560px, 72vw); min-height: 380px; background: #fff; color: #111; border: 6px solid #111; border-radius: 10px; padding: 32px 38px; box-shadow: 0 12px 30px #0008; display: flex; flex-direction: column; justify-content: space-between; }
+    .name { font-size: 32px; font-weight: 850; text-transform: uppercase; letter-spacing: .02em; }
+    .price { font-size: 128px; font-weight: 950; line-height: 1; margin: 18px 0; font-variant-numeric: tabular-nums; }
+    .qty { font-size: 44px; font-weight: 850; }
+    .note { font-size: 18px; opacity: .72; }
+    footer { justify-content: center; flex-wrap: wrap; }
+    #expected { display: none; font-weight: 800; }
+    #expected.show { display: inline; }
+    .hint { opacity: .7; font-size: 14px; }
+  </style>
+</head>
+<body>
+<header>
+  <strong>Price Lens — multi-item camera fixtures</strong>
+  <span id="counter"></span>
+  <button id="prev">← Previous</button>
+  <button id="next">Next →</button>
+</header>
+<main>
+  <div id="fixture"></div>
+</main>
+<footer>
+  <button id="toggleExpected">Show expected</button>
+  <span id="expected"></span>
+  <span class="hint">Scan only the single label currently shown, then use Add in Price Lens before moving to the next case.</span>
+</footer>
+<script>
+const cases = [
+  {
+    expected: "Add as Item 1 — unit price €9.98/kg",
+    html: '<div class="tag"><div class="name">Product 1</div><div class="price">4.99 €</div><div class="qty">500 g</div><div class="note">After Add, move to Product 2.</div></div>'
+  },
+  {
+    expected: "Add as Item 2 — unit price €7.49/kg — BEST after 2 items",
+    html: '<div class="tag"><div class="name">Product 2</div><div class="price">7.49 €</div><div class="qty">1 kg</div><div class="note">After Add, Product 2 should become BEST.</div></div>'
+  },
+  {
+    expected: "Add as Item 3 — unit price €8.10/kg — Product 2 remains BEST",
+    html: '<div class="tag"><div class="name">Product 3</div><div class="price">8.10 €</div><div class="qty">1 kg</div><div class="note">All 3 items should remain visible in the tray.</div></div>'
+  },
+  {
+    expected: "Add as Item 4 — unit price €8.66/kg — Product 2 remains BEST",
+    html: '<div class="tag"><div class="name">Product 4</div><div class="price">12.99 €</div><div class="qty">1.5 kg</div><div class="note">Tray should remain horizontally scrollable.</div></div>'
+  },
+  {
+    expected: "INCOMPATIBLE — must NOT be added to the kg comparison",
+    html: '<div class="tag"><div class="name">Volume product</div><div class="price">2.80 €</div><div class="qty">750 ml</div><div class="note">Existing BEST/result must remain unchanged.</div></div>'
+  },
+  {
+    expected: "After Clear: this can start a new volume comparison at €3.73/L",
+    html: '<div class="tag"><div class="name">New comparison</div><div class="price">2.80 €</div><div class="qty">750 ml</div><div class="note">Use only after testing Clear / Start new.</div></div>'
+  }
+];
+
+let index = 0;
+const fixture = document.querySelector("#fixture");
+const expected = document.querySelector("#expected");
+const counter = document.querySelector("#counter");
+
+function render() {
+  const c = cases[index];
+  fixture.innerHTML = c.html;
+  expected.textContent = c.expected;
+  expected.classList.remove("show");
+  document.querySelector("#toggleExpected").textContent = "Show expected";
+  counter.textContent = `Case ${index + 1} / ${cases.length}`;
+}
+document.querySelector("#prev").onclick = () => { index = (index - 1 + cases.length) % cases.length; render(); };
+document.querySelector("#next").onclick = () => { index = (index + 1) % cases.length; render(); };
+document.querySelector("#toggleExpected").onclick = (event) => {
+  expected.classList.toggle("show");
+  event.currentTarget.textContent = expected.classList.contains("show") ? "Hide expected" : "Show expected";
+};
+document.addEventListener("keydown", event => {
+  if (event.key === "ArrowLeft") document.querySelector("#prev").click();
+  if (event.key === "ArrowRight") document.querySelector("#next").click();
+});
+render();
+</script>
+</body>
+</html>

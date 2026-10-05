@@ -1,10 +1,12 @@
 # Device QA — Price Lens Validation Candidate
 
-Current retest candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013`
-Historical physical candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
+Current multi-item retest candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf`
+Historical physical candidates:
+- `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
+- `8450963dc1db139d2bed9e1b3fea3e0a3236ae06` — first-use UX FAIL
 Baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 
-All rows in the main table refer to the current retest candidate and default to NOT_RUN until observed on the physical iPhone. Historical results for `8450963d` are retained below.
+The M01–M15 table is the primary acceptance set for the current multi-item candidate and defaults to NOT_RUN until observed on the physical iPhone. Earlier D-series scenarios remain useful regression coverage where still applicable; old simultaneous-pair assumptions are historical only.
 
 | ID | Scenario | Expected | Status | Evidence / issue |
 | --- | --- | --- | --- | --- |
@@ -65,7 +67,7 @@ Evidence source: user-reported physical iPhone run and screenshot in the active 
 
 D28 is treated as blocking for the current Validation milestone because it affects comprehension of the core workflow, not merely decorative polish.
 
-After production UI bytes change, D01/D28 and affected scanner/accessibility checks must be repeated on the new candidate. The PASS above remains historical Evidence for `8450963d` only.
+The PASS above remains historical Evidence for `8450963d` only.
 
 ## Historical user-validation result — candidate a2d9d9e0
 
