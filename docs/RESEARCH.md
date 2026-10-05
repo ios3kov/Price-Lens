@@ -161,3 +161,66 @@ No new navigation, manual input, settings flow or product scope is introduced.
 ### Verification
 
 Fresh CI is required because production UI bytes change. Then the new candidate must be reinstalled and the original first-screen symptom rechecked on the physical iPhone before the UX finding can be closed.
+
+## Sequential multi-item capture UX research
+
+Checked: 2026-10-05
+
+Trigger: physical iPhone validation showed that the simultaneous-two-label model remained unclear and did not answer the user's "what if I need more than two?" use case.
+
+### Apple sources checked
+
+- VisionKit — Scanning data with the camera:
+  https://developer.apple.com/documentation/visionkit/scanning-data-with-the-camera
+  - DataScanner continuously tracks recognized items in live video.
+  - The app is expected to provide its own feedback and actions for recognized content.
+  - Custom highlights/actions are compatible with the scanner model.
+
+- DataScannerViewController:
+  https://developer.apple.com/documentation/visionkit/datascannerviewcontroller
+  - `recognizedItems` / delegate updates expose current recognized content.
+  - `regionOfInterest` can restrict the scanned area.
+  - `overlayContainerView` supports app-owned recognition feedback.
+
+- Camera Control HIG:
+  https://developer.apple.com/design/human-interface-guidelines/camera-control
+  - maximize usable viewfinder area;
+  - minimize distracting controls in the viewfinder;
+  - keep camera UI contextual.
+
+### Options considered
+
+1. **Keep two labels simultaneously visible.**
+   - Rejected by physical UX evidence.
+   - Does not scale beyond two.
+   - Makes tag association and "what next?" unclear.
+
+2. **Auto-capture every stable label while the user pans.**
+   - Rejected for v1.
+   - Too easy to add accidental shelf labels without user intent.
+
+3. **Sequential deliberate capture: scan one → preview → Add → scan next.**
+   - Selected.
+   - Preserves camera-only data entry while making the mutation explicit.
+   - Scales naturally to 3+ products.
+   - Lets the user verify recognized price/quantity before adding.
+   - Reduces accidental cross-tag comparison.
+
+### Decision
+
+Use a smaller one-label ROI and keep `recognizesMultipleItems=true` because a single shelf label still contains multiple OCR fragments (price, size, currency, etc.).
+
+The app groups those fragments into one ProductCandidate. If more than one valid product candidate exists in the ROI, Add is not enabled and the user is asked to center one label.
+
+A stable candidate is never inserted automatically. The explicit **Add** action creates/extends an in-memory ComparisonSession. The session has no fixed two-item UI limit and ranks all compatible added products by normalized unit price.
+
+### Verification
+
+Required before closing the workflow change:
+
+- fresh core tests for 3+ session items, ranking, duplicate rejection, unit mismatch and currency mismatch;
+- fresh simulator/device-target build;
+- physical iPhone check that the first-use workflow is self-explanatory;
+- physical test adding at least three products;
+- confirm earlier items remain visible/removable while scanning the next;
+- confirm incompatible candidate never changes the existing winner.

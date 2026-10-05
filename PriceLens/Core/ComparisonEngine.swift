@@ -48,7 +48,7 @@ enum ComparisonEngine {
         )
     }
 
-    private static func normalizedCurrency(_ token: String?) -> String? {
+    static func normalizedCurrency(_ token: String?) -> String? {
         guard let token else { return nil }
         let upper = token.uppercased()
         switch upper {

@@ -26,28 +26,34 @@ The app is split into four boundaries:
    - Text outside that region is excluded before app-owned grouping/parsing.
    - Converts Apple framework objects into app-owned ScannedText values.
 
-2. **Tag grouping**
-   - Groups nearby recognized text into candidate shelf labels using geometry.
-   - If nearby labels collapse into one connected cluster, the fallback tests both horizontal and vertical largest-gap splits.
-   - Validated splits are applied recursively, so a 3+ tag mega-cluster remains 3+ candidates and reaches the ambiguity guard instead of silently becoming two.
+2. **Single-label capture + tag grouping**
+   - The live region of interest is intentionally sized for one shelf label at a time.
+   - Groups nearby recognized text into a candidate shelf label using geometry.
+   - If nearby labels collapse into one connected cluster, the fallback tests horizontal and vertical largest-gap splits.
    - A fallback split is accepted only when both halves independently parse as valid price + quantity candidates.
-   - Semantic duplicates are collapsed only when they are close on both X and Y axes; identical products in separate shelf positions remain distinct candidates.
+   - If the ROI resolves to more than one valid product candidate, no product is chosen automatically; the user is asked to center one label.
+   - Semantic OCR duplicates are collapsed before capture-state decisions.
    - Camera framework types do not leak into parsing logic.
 
-3. **Parsing + comparison core**
+3. **Parsing + comparison-session core**
    - Parses price.
    - Parses package quantity.
    - Normalizes units.
    - Computes unit price.
-   - Decides winner and percentage.
+   - Maintains an in-memory comparison session containing any number of deliberately added compatible products.
+   - Rejects semantic duplicates, incompatible dimensions and explicitly different currencies.
+   - Ranks the whole session by normalized unit price and exposes the best item.
+   - Keeps the existing pairwise ComparisonEngine for pairwise calculations/tests where useful.
    - Pure Swift/Foundation/CoreGraphics only.
    - The exact same source directory is exposed as a Swift Package target for host-independent CI tests; there is no copied test-only implementation.
 
 4. **SwiftUI presentation**
-   - Full-screen scanner.
-   - Minimal guidance.
-   - Result card.
-   - Error/unavailable states.
+   - Camera-first scanner.
+   - One-label scan target.
+   - Stable candidate preview that shows recognized price, quantity and unit price.
+   - Explicit Add action.
+   - Scrollable comparison tray with remove / clear controls and BEST marker.
+   - Error/unavailable/incompatible states.
 
 ## Why VisionKit DataScanner
 
@@ -63,19 +69,20 @@ DataScanner is supported on A12 Bionic or newer hardware.
 
 Because live scanning is the product’s core feature, the first build treats this as a required device capability instead of shipping a non-functional fallback.
 
-## OCR flow
+## OCR / comparison-session flow
 
-1. DataScanner recognizes all visible text.
+1. DataScanner recognizes text inside the single-label region of interest.
 2. Low-confidence text is filtered.
-3. Recognized items are converted into ScannedText:
-   - transcript
-   - bounding rectangle
-   - confidence
-4. TagClusterer groups nearby items.
-5. PriceTagParser tries to create a ProductCandidate from each cluster.
-6. Exactly two valid candidates are required. More than two yields a guidance state instead of an implicit pair choice.
-7. ComparisonEngine checks dimension compatibility and calculates the result.
-8. ScannerModel stabilizes equivalent results before publishing them to the UI.
+3. Recognized items are converted into app-owned ScannedText values.
+4. TagClusterer groups nearby OCR fragments.
+5. PriceTagParser creates zero, one or multiple valid ProductCandidate values.
+6. Zero candidates → searching; multiple candidates → ask the user to center one label.
+7. One candidate is stabilized for 350 ms.
+8. The stable candidate is shown as a preview; recognition alone does not add it.
+9. User taps **Add**.
+10. ComparisonSession validates duplicate / dimension / currency compatibility and appends the product.
+11. Added items remain in memory while the app session is alive.
+12. With two or more items, the UI highlights ComparisonSession.bestItem; scanning remains active so more items can be added.
 
 ## Stabilization
 
@@ -83,12 +90,10 @@ Live OCR changes constantly. Publishing every frame would make the UI unusable.
 
 Initial strategy:
 
-- Build a semantic signature from normalized price + quantity + dimension for each candidate.
-- Require the same pair to remain continuously present for at least 350 ms before publishing a result.
+- Build a semantic signature from normalized price + quantity + dimension for the centered candidate.
+- Require the same candidate to remain continuously present for at least 350 ms before enabling Add.
 - A changed signature restarts the stabilization timer.
-- Keep an already-published result for a 300 ms dropout grace period when OCR temporarily loses one or both tags.
-- The dropout timer is started only once for a continuous loss interval; repeated one-tag OCR updates do not extend the grace indefinitely.
-- A generation gate cancels the delayed clear if the pair returns.
+- Losing the centered candidate clears only the current preview; already-added comparison items remain intact.
 
 The 350 ms value is an initial validation parameter and must be tuned on-device if it feels either jumpy or sluggish.
 
@@ -194,3 +199,22 @@ Initial validation target on iPhone 12-class hardware:
 5. Package quantity may be absent from the shelf tag and visible only on the product package.
 
 Risk 5 may later require widening the scan target from shelf tags to product packaging or combining shelf + package text. It is not silently assumed solved in v1.
+
+
+## Multi-item UX decision
+
+Physical validation showed that the simultaneous-two-label model was not self-explanatory and could not scale beyond two products.
+
+The current design therefore uses deliberate sequential capture:
+
+**scan one → verify what was read → Add → scan next**.
+
+Rationale:
+
+- the user always sees the recognized value before it mutates the comparison;
+- one-label targeting reduces cross-tag association risk;
+- the comparison can grow beyond two items without redesigning the camera state;
+- incompatible items can be rejected before they contaminate an existing set;
+- a horizontal tray keeps previous choices visible while the camera remains active.
+
+This is a product-workflow change, not merely visual polish. The old two-label candidate remains historical device evidence only.

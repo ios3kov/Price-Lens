@@ -7,21 +7,39 @@ struct ContentView: View {
     @StateObject private var scannerModel = ScannerModel()
 
     @State private var feedbackTrigger = 0
-    @State private var lastFeedbackSignature: String?
+    @State private var previousItemCount = 0
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        GeometryReader { proxy in
+            ZStack {
+                Color.black
+                    .ignoresSafeArea()
 
-            cameraLayer
+                cameraLayer
+                    .frame(
+                        width: proxy.size.width,
+                        height: proxy.size.height
+                    )
 
-            if scannerModel.cameraState == .ready {
-                cameraScrims
-                candidateOverlay
-                scannerChrome
+                if scannerModel.cameraState == .ready {
+                    cameraScrims
+                    candidateOverlay
+
+                    VStack(spacing: 12) {
+                        topBar
+                        Spacer(minLength: 0)
+                        bottomArea
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
             }
+            .frame(
+                width: proxy.size.width,
+                height: proxy.size.height
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(.dark)
         .task {
             await scannerModel.prepareCamera()
@@ -39,8 +57,11 @@ struct ContentView: View {
                 scannerModel.appBecameInactive()
             }
         }
-        .onChange(of: scannerModel.scanState) { _, newState in
-            handleFeedback(for: newState)
+        .onChange(of: scannerModel.comparisonItems.count) { _, newCount in
+            if newCount > previousItemCount {
+                feedbackTrigger += 1
+            }
+            previousItemCount = newCount
         }
         .sensoryFeedback(.success, trigger: feedbackTrigger)
     }
@@ -49,15 +70,8 @@ struct ContentView: View {
     private var cameraLayer: some View {
         switch scannerModel.cameraState {
         case .ready:
-            GeometryReader { proxy in
-                ScannerView(model: scannerModel)
-                    .frame(
-                        width: proxy.size.width,
-                        height: proxy.size.height
-                    )
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
+            ScannerView(model: scannerModel)
+                .ignoresSafeArea()
 
         case .preparing:
             VStack(spacing: 14) {
@@ -67,14 +81,14 @@ struct ContentView: View {
 
                 Text("Opening camera…")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(.white.opacity(0.70))
             }
 
         case .denied:
             recoveryView(
                 symbol: "camera.fill",
                 title: "Camera access is off",
-                detail: "Allow camera access to compare price labels.",
+                detail: "Allow camera access to scan price labels.",
                 buttonTitle: "Open Settings"
             ) {
                 guard let url = URL(
@@ -112,91 +126,218 @@ struct ContentView: View {
         VStack(spacing: 0) {
             LinearGradient(
                 colors: [
-                    .black.opacity(0.48),
-                    .black.opacity(0.14),
+                    .black.opacity(0.72),
+                    .black.opacity(0.12),
                     .clear
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 160)
+            .frame(height: 130)
 
             Spacer(minLength: 0)
 
             LinearGradient(
                 colors: [
                     .clear,
-                    .black.opacity(0.16),
-                    .black.opacity(0.58)
+                    .black.opacity(0.18),
+                    .black.opacity(0.82)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 280)
+            .frame(height: 320)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 
-    private var scannerChrome: some View {
-        VStack(spacing: 0) {
-            topBar
-                .padding(.top, 8)
-
-            Spacer(minLength: 0)
-
-            statusCard
-                .padding(.bottom, 12)
-        }
-        .padding(.horizontal, 16)
-    }
-
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "camera.viewfinder")
-                .font(.body.weight(.semibold))
-                .frame(width: 28, height: 28)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Compare prices")
-                    .font(.subheadline.weight(.semibold))
-
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text("Price Lens")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.58))
+                    .font(.headline.weight(.semibold))
+
+                Text(
+                    scannerModel.comparisonItems.isEmpty
+                        ? "Scan one label at a time"
+                        : "\(scannerModel.comparisonItems.count) item\(scannerModel.comparisonItems.count == 1 ? "" : "s") in comparison"
+                )
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.62))
             }
 
             Spacer(minLength: 8)
 
-            ScanProgressPill(
-                count: progressCount,
-                isTooMany: isTooMany
-            )
+            if !scannerModel.comparisonItems.isEmpty {
+                Button("Clear") {
+                    scannerModel.clearComparison()
+                }
+                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.82))
+                .accessibilityLabel("Clear comparison")
+            }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
-        .frame(height: 50)
+        .frame(height: 54)
         .background(
-            .black.opacity(0.48),
-            in: Capsule()
+            .black.opacity(0.50),
+            in: RoundedRectangle(
+                cornerRadius: 18,
+                style: .continuous
+            )
         )
         .overlay(
-            Capsule()
-                .stroke(.white.opacity(0.14), lineWidth: 1)
+            RoundedRectangle(
+                cornerRadius: 18,
+                style: .continuous
+            )
+            .stroke(.white.opacity(0.12), lineWidth: 1)
         )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            isTooMany
-                ? "Too many price labels in view"
-                : "\(progressCount) of 2 price labels found"
+    }
+
+    private var bottomArea: some View {
+        VStack(spacing: 10) {
+            if !scannerModel.comparisonItems.isEmpty {
+                comparisonTray
+            }
+
+            actionPanel
+        }
+    }
+
+    private var comparisonTray: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                if let bestID = scannerModel.bestItemID,
+                   scannerModel.comparisonItems.count >= 2,
+                   let bestIndex = scannerModel.comparisonItems.firstIndex(
+                    where: { $0.id == bestID }
+                   ) {
+                    Label(
+                        "Best value: Item \(bestIndex + 1)",
+                        systemImage: "checkmark.seal.fill"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                } else {
+                    Text(
+                        scannerModel.comparisonItems.count == 1
+                            ? "1 item added"
+                            : "\(scannerModel.comparisonItems.count) items added"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                }
+
+                Spacer(minLength: 8)
+
+                Text("Add more anytime")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.56))
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(
+                        Array(scannerModel.comparisonItems.enumerated()),
+                        id: \.element.id
+                    ) { index, candidate in
+                        ComparisonItemCard(
+                            index: index + 1,
+                            candidate: candidate,
+                            isBest:
+                                scannerModel.comparisonItems.count >= 2
+                                && candidate.id == scannerModel.bestItemID
+                        ) {
+                            scannerModel.removeComparisonItem(
+                                id: candidate.id
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(12)
+        .background(
+            .black.opacity(0.62),
+            in: RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
         )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+            .stroke(.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var actionPanel: some View {
+        switch scannerModel.scanState {
+        case .searching:
+            InstructionCard(
+                symbol: "viewfinder",
+                title: "Scan a price label",
+                detail: scannerModel.comparisonItems.isEmpty
+                    ? "Place one label inside the frame"
+                    : "Point at the next label to add it"
+            )
+
+        case .reading:
+            if let candidate = scannerModel.currentCandidate {
+                CandidateCard(
+                    candidate: candidate,
+                    mode: .reading,
+                    addAction: nil
+                )
+            } else {
+                InstructionCard(
+                    symbol: "text.viewfinder",
+                    title: "Reading label…",
+                    detail: "Hold steady for a moment"
+                )
+            }
+
+        case .ready:
+            if let candidate = scannerModel.currentCandidate {
+                CandidateCard(
+                    candidate: candidate,
+                    mode: .ready
+                ) {
+                    scannerModel.addCurrentCandidate()
+                }
+            }
+
+        case .alreadyAdded:
+            InstructionCard(
+                symbol: "checkmark.circle.fill",
+                title: "Already added",
+                detail: "Move to another price label"
+            )
+
+        case .tooManyTags:
+            InstructionCard(
+                symbol: "rectangle.and.text.magnifyingglass",
+                title: "One label at a time",
+                detail: "Center a single price label inside the frame",
+                isWarning: true
+            )
+
+        case .incompatible(let message):
+            IncompatibleCard(
+                message: message,
+                clearAction: scannerModel.clearComparison
+            )
+        }
     }
 
     private var candidateOverlay: some View {
         GeometryReader { proxy in
-            let candidates = Array(
-                scannerModel.visibleCandidates.prefix(2)
-            )
             let fullBounds = CGRect(
                 origin: .zero,
                 size: proxy.size
@@ -208,10 +349,10 @@ struct ContentView: View {
             ZStack {
                 ScanRegionGuide(bounds: scanRegion)
 
-                ForEach(candidates.indices, id: \.self) { index in
+                if let candidate = scannerModel.currentCandidate {
                     CandidateFrame(
-                        label: index == 0 ? "A" : "B",
-                        bounds: candidates[index].sourceBounds
+                        bounds: candidate.sourceBounds,
+                        isReady: scannerModel.scanState == .ready
                     )
                 }
             }
@@ -219,95 +360,6 @@ struct ContentView: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-
-    @ViewBuilder
-    private var statusCard: some View {
-        switch scannerModel.scanState {
-        case .searching:
-            ScanStatusPanel(
-                symbol: "viewfinder",
-                title: "Aim at 2 price labels",
-                detail: "No tap needed — keep both inside the corners"
-            )
-
-        case .oneTagFound:
-            ScanStatusPanel(
-                symbol: "checkmark.circle.fill",
-                title: "First label found",
-                detail: "Keep it visible and add the second"
-            )
-
-        case .tooManyTags:
-            ScanStatusPanel(
-                symbol: "exclamationmark.triangle.fill",
-                title: "Too many labels",
-                detail: "Move closer until only two remain",
-                emphasis: .warning
-            )
-
-        case .comparing:
-            ScanStatusPanel(
-                symbol: "arrow.left.arrow.right",
-                title: "Comparing…",
-                detail: "Hold steady for a moment",
-                showsProgress: true
-            )
-
-        case .incompatible(let message):
-            ScanStatusPanel(
-                symbol: "exclamationmark.circle.fill",
-                title: "Can't compare these",
-                detail: message,
-                emphasis: .warning
-            )
-
-        case .result(let comparison):
-            ResultCard(comparison: comparison)
-        }
-    }
-
-    private var progressCount: Int {
-        switch scannerModel.scanState {
-        case .searching:
-            return 0
-        case .oneTagFound:
-            return 1
-        case .tooManyTags:
-            return 2
-        case .comparing, .result(_), .incompatible(_):
-            return 2
-        }
-    }
-
-    private var isTooMany: Bool {
-        if case .tooManyTags = scannerModel.scanState {
-            return true
-        }
-        return false
-    }
-
-    private func handleFeedback(for state: ScanState) {
-        switch state {
-        case .result(let comparison):
-            let signature =
-                comparison.left.semanticSignature
-                + "|"
-                + comparison.right.semanticSignature
-
-            guard signature != lastFeedbackSignature else {
-                return
-            }
-
-            lastFeedbackSignature = signature
-            feedbackTrigger += 1
-
-        case .searching, .tooManyTags:
-            lastFeedbackSignature = nil
-
-        default:
-            break
-        }
     }
 
     @ViewBuilder
@@ -364,77 +416,26 @@ struct ContentView: View {
     }
 }
 
-private struct ScanProgressPill: View {
-    let count: Int
-    let isTooMany: Bool
-
-    var body: some View {
-        HStack(spacing: 7) {
-            if isTooMany {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption.weight(.bold))
-
-                Text("3+")
-                    .font(.caption.monospacedDigit().weight(.bold))
-            } else {
-                HStack(spacing: 4) {
-                    ForEach(0..<2, id: \.self) { index in
-                        Circle()
-                            .fill(
-                                index < count
-                                    ? Color.white
-                                    : Color.white.opacity(0.22)
-                            )
-                            .frame(width: 7, height: 7)
-                    }
-                }
-
-                Text("\(count)/2")
-                    .font(.caption.monospacedDigit().weight(.bold))
-            }
-        }
-        .frame(minWidth: 58)
-        .padding(.horizontal, 10)
-        .frame(height: 32)
-        .background(
-            .white.opacity(0.10),
-            in: Capsule()
-        )
-    }
-}
-
-private enum ScanStatusEmphasis {
-    case normal
-    case warning
-}
-
-private struct ScanStatusPanel: View {
+private struct InstructionCard: View {
     let symbol: String
     let title: String
     let detail: String
-    var showsProgress: Bool = false
-    var emphasis: ScanStatusEmphasis = .normal
+    var isWarning: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(.white.opacity(0.10))
-                    .frame(width: 42, height: 42)
-
-                if showsProgress {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Image(systemName: symbol)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(
-                            emphasis == .warning
-                                ? Color.yellow
-                                : Color.white
-                        )
-                }
-            }
+            Image(systemName: symbol)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(
+                    isWarning
+                        ? Color.yellow
+                        : Color.white
+                )
+                .frame(width: 42, height: 42)
+                .background(
+                    .white.opacity(0.10),
+                    in: Circle()
+                )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -443,11 +444,6 @@ private struct ScanStatusPanel: View {
                 Text(detail)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.68))
-                    .lineLimit(2)
-                    .fixedSize(
-                        horizontal: false,
-                        vertical: true
-                    )
             }
 
             Spacer(minLength: 0)
@@ -455,7 +451,7 @@ private struct ScanStatusPanel: View {
         .foregroundStyle(.white)
         .padding(14)
         .background(
-            .black.opacity(0.56),
+            .black.opacity(0.64),
             in: RoundedRectangle(
                 cornerRadius: 22,
                 style: .continuous
@@ -472,13 +468,206 @@ private struct ScanStatusPanel: View {
     }
 }
 
+private enum CandidateCardMode: Equatable {
+    case reading
+    case ready
+}
+
+private struct CandidateCard: View {
+    let candidate: ProductCandidate
+    let mode: CandidateCardMode
+    let addAction: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(
+                    mode == .ready
+                        ? "Label ready"
+                        : "Reading label…"
+                )
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.58))
+
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(candidate.formattedPrice)
+                        .font(.title3.monospacedDigit().weight(.bold))
+
+                    Text("•")
+                        .foregroundStyle(.white.opacity(0.35))
+
+                    Text(candidate.formattedQuantity)
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                Text(
+                    "\(candidate.formattedUnitPrice) per \(candidate.dimension.unitLabel)"
+                )
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.white.opacity(0.72))
+            }
+
+            Spacer(minLength: 8)
+
+            if mode == .ready, let addAction {
+                Button(action: addAction) {
+                    Label("Add", systemImage: "plus")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .accessibilityLabel("Add this price label to comparison")
+            } else {
+                ProgressView()
+                    .tint(.white)
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(14)
+        .background(
+            .black.opacity(0.66),
+            in: RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+            .stroke(
+                mode == .ready
+                    ? .white.opacity(0.24)
+                    : .white.opacity(0.12),
+                lineWidth: 1
+            )
+        )
+    }
+}
+
+private struct IncompatibleCard: View {
+    let message: String
+    let clearAction: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.yellow)
+                .frame(width: 42, height: 42)
+                .background(
+                    .white.opacity(0.10),
+                    in: Circle()
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Can't add this item")
+                    .font(.headline)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.68))
+            }
+
+            Spacer(minLength: 8)
+
+            Button("Start new") {
+                clearAction()
+            }
+            .font(.subheadline.weight(.semibold))
+            .buttonStyle(.bordered)
+        }
+        .foregroundStyle(.white)
+        .padding(14)
+        .background(
+            .black.opacity(0.66),
+            in: RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+            .stroke(.yellow.opacity(0.30), lineWidth: 1)
+        )
+    }
+}
+
+private struct ComparisonItemCard: View {
+    let index: Int
+    let candidate: ProductCandidate
+    let isBest: Bool
+    let removeAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Text("Item \(index)")
+                    .font(.caption.weight(.bold))
+
+                if isBest {
+                    Text("BEST")
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.green, in: Capsule())
+                }
+
+                Spacer(minLength: 4)
+
+                Button(action: removeAction) {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove item \(index)")
+            }
+
+            Text(candidate.formattedUnitPrice)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+
+            Text("per \(candidate.dimension.unitLabel)")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.56))
+        }
+        .frame(width: 126, alignment: .leading)
+        .padding(10)
+        .background(
+            .white.opacity(isBest ? 0.16 : 0.07),
+            in: RoundedRectangle(
+                cornerRadius: 15,
+                style: .continuous
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 15,
+                style: .continuous
+            )
+            .stroke(
+                isBest
+                    ? .white.opacity(0.24)
+                    : .white.opacity(0.08),
+                lineWidth: 1
+            )
+        )
+    }
+}
+
 private struct ScanRegionGuide: View {
     let bounds: CGRect
 
     var body: some View {
         ScanCornersShape()
             .stroke(
-                .white.opacity(0.88),
+                .white.opacity(0.90),
                 style: StrokeStyle(
                     lineWidth: 3,
                     lineCap: .round,
@@ -494,7 +683,7 @@ private struct ScanRegionGuide: View {
                 y: bounds.midY
             )
             .shadow(
-                color: .black.opacity(0.35),
+                color: .black.opacity(0.34),
                 radius: 4
             )
     }
@@ -503,63 +692,27 @@ private struct ScanRegionGuide: View {
 private struct ScanCornersShape: Shape {
     func path(in rect: CGRect) -> Path {
         let length = min(
-            30,
-            min(rect.width, rect.height) * 0.12
+            28,
+            min(rect.width, rect.height) * 0.16
         )
 
         var path = Path()
 
-        path.move(to: CGPoint(
-            x: rect.minX,
-            y: rect.minY + length
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.minX,
-            y: rect.minY
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.minX + length,
-            y: rect.minY
-        ))
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + length))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + length, y: rect.minY))
 
-        path.move(to: CGPoint(
-            x: rect.maxX - length,
-            y: rect.minY
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.maxX,
-            y: rect.minY
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.maxX,
-            y: rect.minY + length
-        ))
+        path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
 
-        path.move(to: CGPoint(
-            x: rect.maxX,
-            y: rect.maxY - length
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.maxX,
-            y: rect.maxY
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.maxX - length,
-            y: rect.maxY
-        ))
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
 
-        path.move(to: CGPoint(
-            x: rect.minX + length,
-            y: rect.maxY
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.minX,
-            y: rect.maxY
-        ))
-        path.addLine(to: CGPoint(
-            x: rect.minX,
-            y: rect.maxY - length
-        ))
+        path.move(to: CGPoint(x: rect.minX + length, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - length))
 
         return path
     }
@@ -568,37 +721,22 @@ private struct ScanCornersShape: Shape {
 private struct CandidateFrame: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let label: String
     let bounds: CGRect
+    let isReady: Bool
 
     var body: some View {
-        let expanded = bounds.insetBy(
-            dx: -8,
-            dy: -8
+        let expanded = bounds.insetBy(dx: -8, dy: -8)
+
+        RoundedRectangle(
+            cornerRadius: 14,
+            style: .continuous
         )
-
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(
-                cornerRadius: 14,
-                style: .continuous
-            )
-            .stroke(
-                .white.opacity(0.96),
-                lineWidth: 2
-            )
-
-            Text(label)
-                .font(.caption2.weight(.black))
-                .foregroundStyle(.black)
-                .frame(width: 28, height: 28)
-                .background(.white, in: Circle())
-                .offset(x: 8, y: 8)
-                .shadow(
-                    color: .black.opacity(0.30),
-                    radius: 3,
-                    y: 1
-                )
-        }
+        .stroke(
+            isReady
+                ? Color.green
+                : Color.white.opacity(0.94),
+            lineWidth: isReady ? 3 : 2
+        )
         .frame(
             width: max(44, expanded.width),
             height: max(44, expanded.height)
@@ -608,7 +746,7 @@ private struct CandidateFrame: View {
             y: expanded.midY
         )
         .shadow(
-            color: .black.opacity(0.22),
+            color: .black.opacity(0.28),
             radius: 4
         )
         .animation(
@@ -620,132 +758,75 @@ private struct CandidateFrame: View {
     }
 }
 
-private struct ResultCard: View {
-    let comparison: PriceComparison
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("BEST VALUE")
-                        .font(.caption2.weight(.bold))
-                        .tracking(1.1)
-                        .foregroundStyle(.white.opacity(0.54))
-
-                    Text(comparison.headline)
-                        .font(.title3.weight(.bold))
-                        .fixedSize(
-                            horizontal: false,
-                            vertical: true
-                        )
-                }
-
-                Spacer(minLength: 8)
-
-                Image(
-                    systemName:
-                        comparison.winner == .equal
-                            ? "equal.circle.fill"
-                            : "checkmark.circle.fill"
-                )
-                .font(.title2)
-                .foregroundStyle(
-                    comparison.winner == .equal
-                        ? Color.white
-                        : Color.green
-                )
-                .accessibilityHidden(true)
-            }
-
-            HStack(spacing: 8) {
-                priceColumn(
-                    title: "A",
-                    value: comparison.left.unitPrice,
-                    isWinner: comparison.winner == .left
-                )
-
-                priceColumn(
-                    title: "B",
-                    value: comparison.right.unitPrice,
-                    isWinner: comparison.winner == .right
-                )
-            }
-        }
-        .foregroundStyle(.white)
-        .padding(16)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(
-                cornerRadius: 24,
-                style: .continuous
-            )
-        )
-        .overlay(
-            RoundedRectangle(
-                cornerRadius: 24,
-                style: .continuous
-            )
-            .stroke(.white.opacity(0.16), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(comparison.headline)
-        .accessibilityValue(
-            "A \(comparison.formattedUnitPrice(comparison.left.unitPrice)) per \(comparison.unitLabel), "
-            + "B \(comparison.formattedUnitPrice(comparison.right.unitPrice)) per \(comparison.unitLabel)"
+private extension ProductCandidate {
+    var formattedPrice: String {
+        Self.formatMoney(
+            price,
+            currencyToken: currencyToken
         )
     }
 
-    private func priceColumn(
-        title: String,
-        value: Decimal,
-        isWinner: Bool
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.caption.weight(.bold))
-                    .tracking(0.7)
+    var formattedUnitPrice: String {
+        Self.formatMoney(
+            unitPrice,
+            currencyToken: currencyToken
+        )
+    }
 
-                if isWinner {
-                    Text("BEST")
-                        .font(.caption2.weight(.black))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.green, in: Capsule())
-                }
+    var formattedQuantity: String {
+        let number = NSDecimalNumber(
+            decimal: normalizedQuantity
+        ).doubleValue
+
+        switch dimension {
+        case .mass:
+            if number < 1 {
+                return "\(Int((number * 1000).rounded())) g"
             }
+            return Self.cleanNumber(number) + " kg"
 
-            Text(comparison.formattedUnitPrice(value))
-                .font(.title3.monospacedDigit().weight(.semibold))
+        case .volume:
+            if number < 1 {
+                return "\(Int((number * 1000).rounded())) ml"
+            }
+            return Self.cleanNumber(number) + " L"
 
-            Text("per \(comparison.unitLabel)")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.62))
+        case .count:
+            return Self.cleanNumber(number) + " pcs"
         }
-        .frame(
-            maxWidth: .infinity,
-            alignment: .leading
+    }
+
+    private static func formatMoney(
+        _ value: Decimal,
+        currencyToken: String?
+    ) -> String {
+        let amount = String(
+            format: "%.2f",
+            NSDecimalNumber(decimal: value).doubleValue
         )
-        .padding(12)
-        .background(
-            .white.opacity(isWinner ? 0.15 : 0.07),
-            in: RoundedRectangle(
-                cornerRadius: 16,
-                style: .continuous
-            )
-        )
-        .overlay(
-            RoundedRectangle(
-                cornerRadius: 16,
-                style: .continuous
-            )
-            .stroke(
-                isWinner
-                    ? .white.opacity(0.24)
-                    : .clear,
-                lineWidth: 1
-            )
+
+        guard let currencyToken,
+              !currencyToken.isEmpty else {
+            return amount
+        }
+
+        if ["€", "$", "£"].contains(currencyToken) {
+            return currencyToken + amount
+        }
+
+        return amount + " " + currencyToken
+    }
+
+    private static func cleanNumber(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+
+        let raw = String(format: "%.2f", value)
+        return raw.replacingOccurrences(
+            of: #"\.?0+$"#,
+            with: "",
+            options: .regularExpression
         )
     }
 }

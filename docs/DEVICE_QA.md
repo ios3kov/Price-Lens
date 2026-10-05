@@ -66,3 +66,35 @@ Evidence source: user-reported physical iPhone run and screenshot in the active 
 D28 is treated as blocking for the current Validation milestone because it affects comprehension of the core workflow, not merely decorative polish.
 
 After production UI bytes change, D01/D28 and affected scanner/accessibility checks must be repeated on the new candidate. The PASS above remains historical Evidence for `8450963d` only.
+
+## Historical user-validation result — candidate a2d9d9e0
+
+Evidence source: user-reported physical iPhone run and screenshot in the active ChatGPT session.
+
+| ID | Scenario | Status | Evidence / issue |
+| --- | --- | --- | --- |
+| D01 | Local signed install | PASS | New UI candidate launched on the physical iPhone. |
+| D28 | First-use camera UX clarity | FAIL | User still could not understand what to do or where to act. |
+| D29 | More than two products | FAIL | Fixed 0/2 workflow cannot support the requested 3+ item use case. |
+
+D28/D29 are blocking and trigger a product-workflow change.
+
+## Required retest for sequential multi-item workflow
+
+| ID | Scenario | Expected | Status | Evidence / issue |
+| --- | --- | --- | --- | --- |
+| M01 | First-use instruction | User understands: scan one label → Add → scan next | NOT_RUN | |
+| M02 | Stable recognition preview | Parsed price, quantity and unit price visible before Add | NOT_RUN | |
+| M03 | Deliberate Add | Recognition alone never adds; Add inserts exactly one item | NOT_RUN | |
+| M04 | Add second item | Tray shows both; best unit price is highlighted | NOT_RUN | |
+| M05 | Add third item | All three remain; best updates across full set | NOT_RUN | |
+| M06 | Add fourth+ item | Tray remains usable and horizontally scrollable | NOT_RUN | |
+| M07 | Remove one item | Correct item disappears and best recomputes | NOT_RUN | |
+| M08 | Clear comparison | Set clears without restarting camera | NOT_RUN | |
+| M09 | Duplicate candidate | Same semantic item is not added twice | NOT_RUN | |
+| M10 | Multiple labels in ROI | Add is unavailable; user is asked to center one | NOT_RUN | |
+| M11 | Incompatible dimension | Candidate is rejected; existing set/winner unchanged | NOT_RUN | |
+| M12 | Different explicit currency | Candidate is rejected; existing set/winner unchanged | NOT_RUN | |
+| M13 | Move between labels | Previous items remain intact while current preview changes | NOT_RUN | |
+| M14 | Background / foreground | Comparison set survives ordinary background; current preview resets safely | NOT_RUN | |
+| M15 | VoiceOver | Add, remove, clear, best item and recognized values are understandable | NOT_RUN | |

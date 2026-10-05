@@ -4,14 +4,15 @@
 
 First end-to-end Price Lens iPhone MVP:
 
-camera -> on-device OCR -> exactly two price-tag candidates -> unit normalization -> comparison result.
+camera -> scan one price label -> review recognized values -> Add -> repeat for 2+ products -> ranked unit-price comparison.
 
 ## State
 
 - Repository: ios3kov/Price-Lens
 - Working branch: feat/initial-mvp
 - Last physically launched candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06`
-- Current validation candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013`
+- Last physically launched candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013`
+- Next multi-item validation candidate: pending implementation commit + fresh CI
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -65,17 +66,22 @@ Historical Evidence for earlier commits remains unchanged. See:
 - `docs/EVIDENCE_INITIAL_MVP.md` — historical pre-AS baseline
 - `docs/EVIDENCE_AS_4_1_VALIDATION_PREP.md` — current AS 4.1 candidate
 
-## Current physical-validation finding
+## Current physical-validation findings
 
-User-reported physical iPhone run of candidate `8450963d`:
+Historical candidate `8450963d`:
 
 - local signed install / launch: PASS;
 - live scanner opened: PASS;
-- first-use camera UX clarity / visual polish: FAIL.
+- first-use camera UX clarity: FAIL.
 
-The screenshot showed large black letterbox areas, an oversized technical-looking scan rectangle, an oversized instruction card and no clear 0/2 → 1/2 → 2/2 recognition state.
+Replacement candidate `a2d9d9e0`:
 
-This is a blocking UX finding for the current Validation milestone. The OCR/core implementation is retained; the presentation/scanner sizing is being revised under the existing product contract.
+- local signed install / launch: PASS;
+- camera-first visual cleanup improved the screen;
+- core workflow comprehension: FAIL;
+- user explicitly reported that it is still unclear what to do and asked how to compare more than two products.
+
+This second result changes the product workflow, not just presentation. The simultaneous-two-label model is retired. The new workflow is sequential deliberate capture: **scan one → preview → Add → scan next**, with an in-memory multi-item comparison tray.
 
 ## UI-fix pre-handoff verification
 
@@ -106,13 +112,13 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Requirement / obligation | Implementation block | Observable acceptance | Check / phase | Current status / Evidence |
 | --- | --- | --- | --- | --- |
 | Camera-only primary workflow; no manual entry | VisionKit scanner + SwiftUI camera UI | User can compare without typing | pre-handoff: source/build review; user-validation: live camera | Implementation PASS; runtime NOT RUN |
-| Exactly two products are compared | clustering + deduplication + CandidatePairSelector | 0/1/3+ candidates never produce a false pair | pre-handoff: unit tests | PASS — verified source `7baf84b6`, 65/65 suite |
+| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION IN PROGRESS |
 | Price + quantity stay associated with the same tag | geometry clustering + recursive split guards | no cross-tag price/quantity pairing | pre-handoff tests + user-validation fixtures | Automated PASS; live camera NOT RUN |
 | Unit normalization is correct | Decimal parser / ComparisonEngine | g↔kg, ml/cl↔L, count and multipacks yield correct unit price | pre-handoff: unit tests | PASS |
 | Ambiguous/unit-price text does not create a false winner | parser rejection rules | `/kg`, `per 100 g/ml`, unsupported ambiguity do not become package price | pre-handoff: regression tests | PASS |
 | Camera lifecycle recovers safely | permission recovery, Try Again, background reset | no stale result after background; denied permission can recover | pre-handoff: compile/review; user-validation: real device | Implementation PASS; runtime NOT RUN |
-| A/B overlays correspond to actual tags | DataScanner bounds + overlay | frames A/B align with intended two labels | user-validation: physical iPhone | NOT RUN |
-| Live OCR is useful on real shelf labels | DataScanner `.accurate` + ROI + stabilization | controlled fixtures and real shelf labels produce correct result | user-validation: physical iPhone | NOT RUN |
+| Candidate preview corresponds to centered label | DataScanner bounds + one-label ROI | preview outline/value belongs to the label the user is about to add | user-validation: physical iPhone | NOT RUN |
+| Live OCR is useful on real shelf labels | DataScanner `.accurate` + one-label ROI + stabilization | stable preview is correct before Add; previously added items remain intact | user-validation: physical iPhone | NOT RUN |
 | Performance target | stabilization / on-device processing | useful result <= 1.5 s after stable readable framing | user-validation: physical iPhone timing | NOT RUN |
 | Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on 8450963d |
 | Basic accessibility | SwiftUI semantics + Reduce Motion + result accessibility value | critical result/recovery state is understandable without color-only cues | pre-handoff compile/review + user-validation device checks | Implementation PASS; device checks NOT_RUN |
@@ -146,3 +152,45 @@ These items do **not** block the current local iPhone Validation gate, but they 
 - App Store upload, review and publication — not authorized.
 
 None of these may be retroactively marked PASS from the current Validation evidence.
+
+
+## Feature-set change — multi-item comparison
+
+Source: user physical-device feedback in the active validation session.
+
+### Retained
+
+- camera-only price/quantity recognition;
+- no manual price/quantity entry;
+- deterministic unit normalization;
+- no guessed winner on ambiguous OCR;
+- on-device processing/privacy contract;
+- existing parser format support;
+- camera permission/recovery;
+- AS Development Rules 4.1.0 baseline.
+
+### Changed
+
+- old core workflow: hold exactly two labels in frame simultaneously;
+- new core workflow: scan one label, verify parsed values, tap Add, repeat;
+- comparison set now supports 2+ compatible products instead of a fixed pair;
+- result is the best normalized unit price across the whole set.
+
+### Added
+
+- explicit Add action;
+- scrollable comparison tray;
+- remove individual item / clear comparison;
+- duplicate rejection;
+- multi-item ranking;
+- explicit incompatible-unit/currency rejection before Add.
+
+### Deferred / not implied
+
+- product names/barcodes;
+- persistent history;
+- accounts/cloud sync;
+- manual corrections;
+- App Store release.
+
+Fresh tests and physical-device evidence are required because the workflow and production bytes change.

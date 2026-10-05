@@ -113,8 +113,8 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertGreaterThan(region.minY, bounds.minY)
         XCTAssertLessThan(region.maxX, bounds.maxX)
         XCTAssertLessThan(region.maxY, bounds.maxY)
-        XCTAssertEqual(region.width, 351, accuracy: 0.01)
-        XCTAssertEqual(region.height, 489.52, accuracy: 0.01)
+        XCTAssertEqual(region.width, 327.6, accuracy: 0.01)
+        XCTAssertEqual(region.height, 270.08, accuracy: 0.01)
     }
 
     func testScanRegionRejectsEmptyBounds() {
@@ -916,6 +916,138 @@ final class PriceTagParserTests: XCTestCase {
 
         XCTAssertEqual(ordered.first?.price, Decimal(string: "4.99"))
         XCTAssertEqual(ordered.last?.price, Decimal(string: "7.49"))
+    }
+
+    func testComparisonSessionAddsAndRanksMultipleItems() {
+        var session = ComparisonSession()
+
+        let first = productCandidate(
+            price: "4.99",
+            quantity: "0.50",
+            bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+        )
+        let second = productCandidate(
+            price: "7.49",
+            quantity: "1.00",
+            bounds: CGRect(x: 110, y: 10, width: 80, height: 60)
+        )
+        let third = productCandidate(
+            price: "8.10",
+            quantity: "1.00",
+            bounds: CGRect(x: 210, y: 10, width: 80, height: 60)
+        )
+
+        XCTAssertNoThrow(try session.add(first).get())
+        XCTAssertNoThrow(try session.add(second).get())
+        XCTAssertNoThrow(try session.add(third).get())
+
+        XCTAssertEqual(session.items.count, 3)
+        XCTAssertEqual(
+            session.rankedItems.map(\.price),
+            [
+                Decimal(string: "7.49")!,
+                Decimal(string: "8.10")!,
+                Decimal(string: "4.99")!
+            ]
+        )
+        XCTAssertEqual(
+            session.bestItem?.price,
+            Decimal(string: "7.49")
+        )
+    }
+
+    func testComparisonSessionRejectsDuplicate() throws {
+        var session = ComparisonSession()
+        let candidate = productCandidate(
+            price: "4.99",
+            quantity: "0.50",
+            bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+        )
+
+        try session.add(candidate).get()
+
+        if case .failure(.duplicate) = session.add(candidate) {
+            // Expected.
+        } else {
+            XCTFail("Expected duplicate rejection")
+        }
+    }
+
+    func testComparisonSessionRejectsMixedDimensions() throws {
+        var session = ComparisonSession()
+        let mass = productCandidate(
+            price: "4.99",
+            quantity: "0.50",
+            bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+        )
+        let volume = ProductCandidate(
+            id: UUID(),
+            price: Decimal(string: "2.99")!,
+            currencyToken: "€",
+            normalizedQuantity: Decimal(string: "0.75")!,
+            dimension: .volume,
+            sourceBounds: CGRect(x: 110, y: 10, width: 80, height: 60),
+            confidence: 0.9,
+            rawText: ""
+        )
+
+        try session.add(mass).get()
+
+        if case .failure(.incompatibleDimensions) = session.add(volume) {
+            // Expected.
+        } else {
+            XCTFail("Expected incompatible dimension rejection")
+        }
+    }
+
+    func testComparisonSessionRejectsDifferentCurrencies() throws {
+        var session = ComparisonSession()
+        let euro = productCandidate(
+            price: "4.99",
+            quantity: "0.50",
+            bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+        )
+        let dollar = ProductCandidate(
+            id: UUID(),
+            price: Decimal(string: "4.99")!,
+            currencyToken: "$",
+            normalizedQuantity: Decimal(string: "0.50")!,
+            dimension: .mass,
+            sourceBounds: CGRect(x: 110, y: 10, width: 80, height: 60),
+            confidence: 0.9,
+            rawText: ""
+        )
+
+        try session.add(euro).get()
+
+        if case .failure(.differentCurrencies) = session.add(dollar) {
+            // Expected.
+        } else {
+            XCTFail("Expected different currency rejection")
+        }
+    }
+
+    func testComparisonSessionRemoveAndClear() throws {
+        var session = ComparisonSession()
+        let first = productCandidate(
+            price: "4.99",
+            quantity: "0.50",
+            bounds: CGRect(x: 10, y: 10, width: 80, height: 60)
+        )
+        let second = productCandidate(
+            price: "7.49",
+            quantity: "1.00",
+            bounds: CGRect(x: 110, y: 10, width: 80, height: 60)
+        )
+
+        try session.add(first).get()
+        try session.add(second).get()
+
+        session.remove(id: first.id)
+        XCTAssertEqual(session.items.map(\.id), [second.id])
+
+        session.clear()
+        XCTAssertTrue(session.items.isEmpty)
     }
 
     func testCandidatePairSelectorRefusesMoreThanTwoCandidates() {

@@ -4,7 +4,7 @@
 
 Price Lens is an iPhone app that tells a shopper which of two products is actually cheaper after normalizing price by package size.
 
-The interaction is intentionally simple: point the camera at two price tags and get a direct comparison.
+The interaction is intentionally simple: scan one price label, add it to a comparison, then scan as many additional labels as needed.
 
 ## Who it is for
 
@@ -17,24 +17,27 @@ Shelf prices are easy to compare only when package sizes match. When one product
 ## Core workflow
 
 1. Open Price Lens.
-2. Point the iPhone camera at two price tags.
-3. The app recognizes price and package quantity for both.
-4. The app normalizes both to kg, L or item.
-5. The app shows which is cheaper and by what percentage.
+2. Point the iPhone camera at one price label.
+3. The app recognizes price and package quantity and shows what it read.
+4. Tap **Add** to add that product to the current comparison.
+5. Point at the next price label and repeat.
+6. With two or more compatible products, the app highlights the best unit price.
+7. Keep adding more products, remove individual items, or clear the comparison.
 
-No manual entry is part of the core workflow.
+No manual price/quantity entry is part of the core workflow.
 
 ## Core scope for v1
 
 - iPhone only.
 - Live camera scanning.
-- Two products at a time.
+- Two or more products in one comparison session; no fixed two-item UI limit.
 - OCR for price and package quantity.
 - Mass: g / kg.
 - Volume: ml / cl / L.
 - Count: item / pc / pcs / шт.
 - Multipacks such as 6 × 330 ml.
-- Automatic unit-price comparison.
+- Deliberate Add-to-comparison action after stable recognition.
+- Automatic ranking by normalized unit price after two or more compatible items are added.
 - Clear retry state when recognition is insufficient.
 
 ## Important
@@ -79,7 +82,9 @@ These assumptions are engineering defaults for the first build, not permanent pr
 ## Success criteria for the first validation milestone
 
 - User can obtain a comparison without typing anything.
-- Two supported labels in good light produce a stable comparison.
+- A supported label in good light produces a stable preview before Add.
+- Two or more compatible added labels produce a stable ranked comparison.
+- Adding a third or later compatible item updates the best result without losing earlier items.
 - Supported units normalize correctly.
 - Mixed dimensions (for example kg vs L) never produce a false winner.
 - Low-confidence or incomplete recognition asks the user to move closer / reframe instead of inventing a result.

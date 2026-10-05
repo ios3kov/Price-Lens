@@ -16,10 +16,10 @@ enum ScanRegionLayout {
         }
 
         return CGRect(
-            x: bounds.minX + bounds.width * 0.05,
-            y: bounds.minY + bounds.height * 0.14,
-            width: bounds.width * 0.90,
-            height: bounds.height * 0.58
+            x: bounds.minX + bounds.width * 0.08,
+            y: bounds.minY + bounds.height * 0.28,
+            width: bounds.width * 0.84,
+            height: bounds.height * 0.32
         )
     }
 }
@@ -69,6 +69,127 @@ struct ProductCandidate: Identifiable, Equatable {
 }
 
 
+
+
+enum ComparisonSessionError: Error, Equatable {
+    case duplicate
+    case incompatibleDimensions
+    case differentCurrencies
+
+    var message: String {
+        switch self {
+        case .duplicate:
+            return "This item is already in the comparison"
+        case .incompatibleDimensions:
+            return "This item uses a different unit"
+        case .differentCurrencies:
+            return "This item uses a different currency"
+        }
+    }
+}
+
+struct ComparisonSession: Equatable {
+    private(set) var items: [ProductCandidate] = []
+
+    mutating func add(
+        _ candidate: ProductCandidate
+    ) -> Result<Void, ComparisonSessionError> {
+        if items.contains(where: {
+            $0.semanticSignature == candidate.semanticSignature
+        }) {
+            return .failure(.duplicate)
+        }
+
+        if let first = items.first {
+            guard first.dimension == candidate.dimension else {
+                return .failure(.incompatibleDimensions)
+            }
+
+            if let firstCurrency = ComparisonEngine.normalizedCurrency(
+                first.currencyToken
+            ),
+               let candidateCurrency = ComparisonEngine.normalizedCurrency(
+                candidate.currencyToken
+               ),
+               firstCurrency != candidateCurrency {
+                return .failure(.differentCurrencies)
+            }
+        }
+
+        items.append(candidate)
+        return .success(())
+    }
+
+    mutating func remove(id: UUID) {
+        items.removeAll { $0.id == id }
+    }
+
+    mutating func clear() {
+        items.removeAll()
+    }
+
+    var rankedItems: [ProductCandidate] {
+        items.sorted {
+            if $0.unitPrice == $1.unitPrice {
+                return $0.semanticSignature < $1.semanticSignature
+            }
+            return $0.unitPrice < $1.unitPrice
+        }
+    }
+
+    var bestItem: ProductCandidate? {
+        rankedItems.first
+    }
+
+    func savingsPercent(
+        versus candidate: ProductCandidate
+    ) -> Decimal? {
+        guard let bestItem,
+              bestItem.unitPrice > 0,
+              candidate.unitPrice > 0 else {
+            return nil
+        }
+
+        if candidate.semanticSignature == bestItem.semanticSignature {
+            return 0
+        }
+
+        return (
+            (candidate.unitPrice - bestItem.unitPrice)
+            / candidate.unitPrice
+        ) * 100
+    }
+
+    func compatibility(
+        with candidate: ProductCandidate
+    ) -> Result<Void, ComparisonSessionError> {
+        guard let first = items.first else {
+            return .success(())
+        }
+
+        guard first.dimension == candidate.dimension else {
+            return .failure(.incompatibleDimensions)
+        }
+
+        if let firstCurrency = ComparisonEngine.normalizedCurrency(
+            first.currencyToken
+        ),
+           let candidateCurrency = ComparisonEngine.normalizedCurrency(
+            candidate.currencyToken
+           ),
+           firstCurrency != candidateCurrency {
+            return .failure(.differentCurrencies)
+        }
+
+        if items.contains(where: {
+            $0.semanticSignature == candidate.semanticSignature
+        }) {
+            return .failure(.duplicate)
+        }
+
+        return .success(())
+    }
+}
 
 
 enum CandidatePairSelection: Equatable {
@@ -284,10 +405,10 @@ struct PriceComparison: Equatable {
 
 enum ScanState: Equatable {
     case searching
-    case oneTagFound
+    case reading
+    case ready
+    case alreadyAdded
     case tooManyTags
-    case comparing
-    case result(PriceComparison)
     case incompatible(String)
 }
 

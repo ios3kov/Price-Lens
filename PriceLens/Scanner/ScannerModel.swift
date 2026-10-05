@@ -7,10 +7,11 @@ import VisionKit
 final class ScannerModel: ObservableObject {
     @Published private(set) var cameraState: CameraState = .preparing
     @Published private(set) var scanState: ScanState = .searching
-    @Published private(set) var visibleCandidates: [ProductCandidate] = []
+    @Published private(set) var currentCandidate: ProductCandidate?
+    @Published private(set) var comparisonItems: [ProductCandidate] = []
 
     private var stabilizer = RecognitionStabilizer()
-    private var dropoutGate = DropoutGraceGate()
+    private var session = ComparisonSession()
     private var missingUpdateCount = 0
 
     func prepareCamera() async {
@@ -45,7 +46,9 @@ final class ScannerModel: ObservableObject {
         }
 
         guard DataScannerViewController.isAvailable else {
-            cameraState = .failed("Live text scanner is currently unavailable")
+            cameraState = .failed(
+                "Live text scanner is currently unavailable"
+            )
             return
         }
 
@@ -53,71 +56,96 @@ final class ScannerModel: ObservableObject {
     }
 
     func receive(_ items: [ScannedText]) {
-        let candidates = TagClusterer.clusters(from: items)
-            .compactMap(PriceTagParser.parse(cluster:))
+        let candidates = CandidateDeduplicator.deduplicated(
+            TagClusterer.clusters(from: items)
+                .compactMap(PriceTagParser.parse(cluster:))
+        )
 
-        switch CandidatePairSelector.select(from: candidates) {
-        case .tooMany:
-            dropoutGate.cancel()
-            visibleCandidates = []
+        guard candidates.count <= 1 else {
+            currentCandidate = nil
             stabilizer.reset()
             missingUpdateCount = 0
             scanState = .tooManyTags
             return
+        }
 
-        case .none:
+        guard let candidate = candidates.first else {
             missingUpdateCount += 1
 
-            if case .result = scanState {
-                scheduleResultDropout(fallbackCandidates: [])
-                return
-            }
-
-            dropoutGate.cancel()
-            stabilizer.reset()
-
-            if missingUpdateCount >= 3 {
-                visibleCandidates = []
+            if missingUpdateCount >= 2 {
+                currentCandidate = nil
+                stabilizer.reset()
                 scanState = .searching
             }
             return
-
-        case .one(let candidate):
-            missingUpdateCount += 1
-
-            if case .result = scanState {
-                scheduleResultDropout(
-                    fallbackCandidates: [candidate]
-                )
-                return
-            }
-
-            dropoutGate.cancel()
-            stabilizer.reset()
-            visibleCandidates = [candidate]
-            scanState = .oneTagFound
-            return
-
-        case .pair(let left, let right):
-            dropoutGate.cancel()
-            missingUpdateCount = 0
-            visibleCandidates = [left, right]
-
-            switch ComparisonEngine.compare(left: left, right: right) {
-            case .failure(let failure):
-                stabilizer.reset()
-                scanState = .incompatible(failure.message)
-
-            case .success(let comparison):
-                let signature = left.semanticSignature + "|" + right.semanticSignature
-                let isStable = stabilizer.observe(
-                    signature: signature,
-                    at: ProcessInfo.processInfo.systemUptime
-                )
-
-                scanState = isStable ? .result(comparison) : .comparing
-            }
         }
+
+        missingUpdateCount = 0
+        currentCandidate = candidate
+
+        switch session.compatibility(with: candidate) {
+        case .failure(.duplicate):
+            stabilizer.reset()
+            scanState = .alreadyAdded
+
+        case .failure(let error):
+            stabilizer.reset()
+            scanState = .incompatible(error.message)
+
+        case .success:
+            let stable = stabilizer.observe(
+                signature: candidate.semanticSignature,
+                at: ProcessInfo.processInfo.systemUptime
+            )
+            scanState = stable ? .ready : .reading
+        }
+    }
+
+    func addCurrentCandidate() {
+        guard let currentCandidate else {
+            return
+        }
+
+        switch session.add(currentCandidate) {
+        case .success:
+            comparisonItems = session.items
+            stabilizer.reset()
+            scanState = .alreadyAdded
+
+        case .failure(.duplicate):
+            stabilizer.reset()
+            scanState = .alreadyAdded
+
+        case .failure(let error):
+            stabilizer.reset()
+            scanState = .incompatible(error.message)
+        }
+    }
+
+    func removeComparisonItem(id: UUID) {
+        session.remove(id: id)
+        comparisonItems = session.items
+        reevaluateCurrentCandidate()
+    }
+
+    func clearComparison() {
+        session.clear()
+        comparisonItems = []
+        reevaluateCurrentCandidate()
+    }
+
+    var rankedComparisonItems: [ProductCandidate] {
+        session.rankedItems
+    }
+
+    var bestItemID: UUID? {
+        session.bestItem?.id
+    }
+
+    func savingsPercent(
+        versus candidate: ProductCandidate
+    ) -> Decimal? {
+        session.savingsPercent(versus: candidate)
     }
 
     func appBecameInactive() {
@@ -136,39 +164,29 @@ final class ScannerModel: ObservableObject {
     }
 
     private func resetRecognition() {
-        dropoutGate.cancel()
         stabilizer.reset()
         missingUpdateCount = 0
-        visibleCandidates = []
+        currentCandidate = nil
         scanState = .searching
     }
 
-    private func scheduleResultDropout(
-        fallbackCandidates: [ProductCandidate]
-    ) {
-        guard let generation = dropoutGate.begin() else {
+    private func reevaluateCurrentCandidate() {
+        stabilizer.reset()
+
+        guard let currentCandidate else {
+            scanState = .searching
             return
         }
 
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 300_000_000)
+        switch session.compatibility(with: currentCandidate) {
+        case .success:
+            scanState = .reading
 
-            guard let self,
-                  self.dropoutGate.complete(generation: generation),
-                  case .result = self.scanState else {
-                return
-            }
+        case .failure(.duplicate):
+            scanState = .alreadyAdded
 
-            self.stabilizer.reset()
-            self.visibleCandidates = fallbackCandidates
-
-            if fallbackCandidates.count == 1 {
-                self.scanState = .oneTagFound
-            } else {
-                self.visibleCandidates = []
-                self.scanState = .searching
-            }
+        case .failure(let error):
+            scanState = .incompatible(error.message)
         }
     }
-
 }

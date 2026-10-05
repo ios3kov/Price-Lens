@@ -6,10 +6,13 @@
 
 - The product is an iPhone app.
 - Primary input is the live camera.
-- User points the camera at two price tags.
+- User scans one price label at a time.
+- A recognized label shows a preview of price, package quantity and normalized unit price before it is added.
+- User explicitly adds a recognized label to the current comparison.
+- A comparison contains two or more products and can continue growing; the main UI does not impose a fixed two-item workflow.
 - The app recognizes price plus weight / volume / count.
-- The app compares unit price in kg / L / item.
-- The primary output is a direct statement such as “This one is 18% cheaper per kg”.
+- The app compares unit price in kg / L / item across the whole comparison set.
+- The primary output highlights the best unit price while keeping every added item visible and removable.
 - Core use cases include supermarkets, cosmetics and household goods.
 - No manual entry in the primary workflow.
 - UI should feel like a normal camera with a minimal overlay.
@@ -17,9 +20,15 @@
 ### Derived requirements
 
 - The live scanner must restrict recognition to a visible central comparison zone so surrounding shelf labels are not silently selected.
-- OCR results inside that zone must be grouped into two price-tag candidates.
-- If more than two valid price tags are present, the app must refuse to choose a pair automatically and ask the user to tighten the frame.
-- Price and quantity must be associated with the correct tag.
+- The comparison zone is intentionally sized for one price label at a time.
+- OCR results inside that zone must resolve to at most one valid product candidate before the Add action becomes available.
+- If multiple valid labels are inside the zone, the app must refuse to guess and ask the user to center one label.
+- Price and quantity must be associated with the same scanned label.
+- Adding a product is deliberate: recognition alone never mutates the comparison set.
+- Duplicate semantic candidates must not be silently added twice.
+- Added products can be removed individually or cleared as a set.
+- The current comparison set accepts only compatible dimensions and explicitly compatible currencies.
+- Once two or more items are present, the lowest normalized unit price is marked as best; additional items can still be scanned and added.
 - Quantities must be normalized before comparison.
 - The system must refuse comparison when dimensions differ.
 - Recognition needs temporal stabilization so the result does not flicker.
@@ -95,31 +104,31 @@ A decimal amount with two fraction digits may be treated as a price even when th
 
 ### Searching
 
-Not enough usable OCR content is visible.
+No valid label is centered yet. Guidance asks the user to place one price label inside the scan target.
 
-### One tag found
+### Reading
 
-A valid price + quantity pair is available for one candidate.
+One candidate is visible but has not yet met stabilization requirements.
 
-### Too many tags
+### Ready to add
 
-More than two valid candidates are inside the comparison zone. No pair is selected; the user is asked to move closer.
+A stable candidate is visible. The UI shows the recognized package price, normalized quantity and unit price plus an explicit **Add** action.
 
-### Comparing
+### Already added
 
-Two valid comparable candidates are present but have not yet met stabilization requirements.
+The centered candidate is already in the comparison. Guidance asks the user to move to another label.
 
-### Result
+### Multiple labels
 
-Two candidates are stable and comparable.
+More than one valid candidate is visible in the single-label scan target. No item is selected; the user is asked to center one label.
 
 ### Incompatible
 
-Two valid candidates use different dimensions.
+The candidate uses a different dimension or explicit currency from the existing comparison set. It is not added automatically; the UI offers a clear way to start a new comparison.
 
-### Retry
+### Comparison set
 
-OCR confidence or parsing confidence is below the safe threshold.
+One or more previously added products remain visible in a horizontal tray. With two or more compatible items, the current best unit price is highlighted. Adding more products updates the best item automatically.
 
 ### Camera unavailable
 
@@ -136,12 +145,15 @@ Permission denied, restriction, unsupported hardware or scanner runtime failure.
 - UI must not cover the central price-tag area more than necessary.
 - A subtle comparison-zone guide must match the actual OCR region of interest.
 - The camera viewfinder must visually fill the screen; large unexplained letterbox areas are not acceptable in the primary scanning state.
-- The user must understand recognition progress at a glance: 0/2, 1/2, 2/2 or too many labels.
-- The scan guide should use lightweight corner cues rather than a dominant technical/debug-style rectangle.
+- The first screen must explain the workflow without prior instruction: **scan one label → review recognition → Add → scan the next**.
+- Do not show a fixed `0/2` counter because the comparison may contain more than two items.
+- The scan guide should use lightweight corner cues sized for one label rather than a dominant technical/debug-style rectangle.
 - Guidance must stay compact and must not obscure the central scanning area.
-- A/B markers must appear directly on the recognized labels and map unambiguously to the result card.
-- The primary scanning state requires no tap; this must be stated clearly in the first-use guidance.
-- The result should appear as a compact comparison sheet with the cheaper option identified by text/symbol, not color alone.
+- A stable recognized candidate must show what the app actually read before the user can add it.
+- The primary Add action must be visually obvious and must not be confused with manual data entry.
+- Added items remain visible in a horizontally scrollable comparison tray with individual remove actions.
+- When two or more items exist, the best unit price is identified by text/symbol, not color alone.
+- The user must be able to continue scanning additional items without leaving the camera flow.
 
 ## Acceptance examples
 
@@ -181,3 +193,30 @@ Tag A: 4.99 for 500 g
 Tag B: 4.99 for 500 ml
 
 Result: no comparison; dimensions are incompatible.
+
+
+## Multi-item acceptance
+
+### Example E — three mass products
+
+Item 1: 4.99 for 500 g → 9.98 / kg  
+Item 2: 7.49 for 1 kg → 7.49 / kg  
+Item 3: 8.10 for 1 kg → 8.10 / kg
+
+Expected:
+
+- all three items remain in the comparison tray;
+- Item 2 is marked BEST;
+- scanning a fourth compatible product remains available;
+- no pair is chosen or discarded merely because the set contains more than two items.
+
+### Example F — incompatible addition
+
+Existing comparison: mass products.  
+New candidate: 2.80 for 750 ml.
+
+Expected:
+
+- volume item is not added to the mass comparison;
+- no winner changes;
+- UI explains the unit mismatch and offers to start a new comparison.
