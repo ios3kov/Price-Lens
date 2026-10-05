@@ -52,6 +52,31 @@ struct ProductCandidate: Identifiable, Equatable {
     }
 }
 
+
+enum CandidateOrdering {
+    static func ordered(_ candidates: [ProductCandidate]) -> [ProductCandidate] {
+        guard candidates.count >= 2 else {
+            return candidates
+        }
+
+        let first = candidates[0]
+        let second = candidates[1]
+
+        let dx = abs(first.sourceBounds.midX - second.sourceBounds.midX)
+        let dy = abs(first.sourceBounds.midY - second.sourceBounds.midY)
+
+        if dx >= dy {
+            return candidates.sorted {
+                $0.sourceBounds.midX < $1.sourceBounds.midX
+            }
+        }
+
+        return candidates.sorted {
+            $0.sourceBounds.midY < $1.sourceBounds.midY
+        }
+    }
+}
+
 enum ComparisonFailure: Equatable {
     case incompatibleDimensions
     case differentCurrencies

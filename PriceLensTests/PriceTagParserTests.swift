@@ -299,6 +299,54 @@ final class PriceTagParserTests: XCTestCase {
         XCTAssertEqual(prices, Set(["4.99", "7.49"]))
     }
 
+    func testCandidateOrderingUsesHorizontalAxisForSideBySideTags() throws {
+        let left = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99", x: 20, y: 40, height: 40),
+                    item("500 g", x: 20, y: 88, height: 22)
+                ]
+            )
+        )
+        let right = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("7.49", x: 240, y: 20, height: 40),
+                    item("1 kg", x: 240, y: 68, height: 22)
+                ]
+            )
+        )
+
+        let ordered = CandidateOrdering.ordered([right, left])
+
+        XCTAssertEqual(ordered.first?.price, Decimal(string: "4.99"))
+        XCTAssertEqual(ordered.last?.price, Decimal(string: "7.49"))
+    }
+
+    func testCandidateOrderingUsesVerticalAxisForStackedTags() throws {
+        let top = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("4.99", x: 40, y: 20, height: 40),
+                    item("500 g", x: 40, y: 68, height: 22)
+                ]
+            )
+        )
+        let bottom = try XCTUnwrap(
+            PriceTagParser.parse(
+                cluster: [
+                    item("7.49", x: 20, y: 240, height: 40),
+                    item("1 kg", x: 20, y: 288, height: 22)
+                ]
+            )
+        )
+
+        let ordered = CandidateOrdering.ordered([bottom, top])
+
+        XCTAssertEqual(ordered.first?.price, Decimal(string: "4.99"))
+        XCTAssertEqual(ordered.last?.price, Decimal(string: "7.49"))
+    }
+
     func testEqualUnitPricesProduceNoWinner() throws {
         let first = try XCTUnwrap(
             PriceTagParser.parse(

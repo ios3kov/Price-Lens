@@ -80,22 +80,14 @@ final class ScannerModel: ObservableObject {
 
         missingUpdateCount = 0
 
-        // Prefer the two strongest candidates, then give them a deterministic
-        // screen order: left-to-right, or top-to-bottom when nearly aligned.
+        // Prefer the two strongest candidates, then give them a stable
+        // screen order using the pair's dominant spatial axis.
         let strongest = Array(
             candidates
                 .sorted { $0.confidence > $1.confidence }
                 .prefix(2)
         )
-        let ordered = strongest.sorted { lhs, rhs in
-            let horizontalDistance = abs(
-                lhs.sourceBounds.midX - rhs.sourceBounds.midX
-            )
-            if horizontalDistance > 44 {
-                return lhs.sourceBounds.midX < rhs.sourceBounds.midX
-            }
-            return lhs.sourceBounds.midY < rhs.sourceBounds.midY
-        }
+        let ordered = CandidateOrdering.ordered(strongest)
 
         guard ordered.count == 2 else {
             visibleCandidates = []
