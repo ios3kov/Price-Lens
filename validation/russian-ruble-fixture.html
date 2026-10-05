@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Price Lens — Russian Ruble Fixture</title>
+<style>
+  :root { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:#202124; display:grid; place-items:center; }
+  .tag {
+    width:min(900px,88vw);
+    min-height:480px;
+    background:#f6e76c;
+    color:#111;
+    border:6px solid #111;
+    border-radius:14px;
+    padding:30px 38px;
+    display:grid;
+    grid-template-columns: 0.9fr 2.2fr;
+    gap:28px;
+    box-shadow:0 20px 50px #0009;
+  }
+  .discount {
+    background:#111; color:#f6e76c; border-radius:18px;
+    display:grid; place-items:center; text-align:center;
+    font-weight:950; font-size:56px; line-height:1.05; padding:24px;
+  }
+  .content { display:flex; flex-direction:column; justify-content:space-between; }
+  .name { font-size:30px; font-weight:800; text-transform:uppercase; }
+  .qty { font-size:24px; font-weight:750; margin-top:4px; }
+  .old { font-size:38px; font-weight:700; margin-top:26px; }
+  .old span { font-size:20px; vertical-align:top; }
+  .price { display:flex; align-items:flex-start; line-height:.8; margin:8px 0 2px; }
+  .whole { font-size:170px; font-weight:950; letter-spacing:-8px; }
+  .cents { font-size:58px; font-weight:900; margin:8px 0 0 12px; }
+  .currency { font-size:34px; font-weight:900; margin:48px 0 0 -42px; }
+  .hint { font-size:18px; opacity:.68; }
+</style>
+</head>
+<body>
+  <div class="tag">
+    <div class="discount">-15%<br>СКИДКА<br>С КАРТОЙ</div>
+    <div class="content">
+      <div>
+        <div class="name">ПЕЧЕНЬЕ ШОКОЛАЙТ</div>
+        <div class="qty">200Г ОРЕХ, КРЕМ С ФРУКТОВОЙ НАЧИНКОЙ</div>
+        <div class="old">Без карты&nbsp;&nbsp;269<span>99</span></div>
+      </div>
+      <div class="price">
+        <div class="whole">229</div>
+        <div class="cents">99</div>
+        <div class="currency">₽</div>
+      </div>
+      <div class="hint">Expected: 229.99 ₽ · 200 g · 1149.95 ₽/kg</div>
+    </div>
+  </div>
+</body>
+</html>

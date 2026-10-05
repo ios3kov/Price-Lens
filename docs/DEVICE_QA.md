@@ -1,6 +1,7 @@
 # Device QA — Price Lens Validation Candidate
 
-Current multi-item retest candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf`
+Current OCR-fix retest candidate: `7a25dbceb00926a868c5686934c3059e0269e932`
+Previous multi-item physical candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — Russian ₽ OCR FAIL
 Historical physical candidates:
 - `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
 - `8450963dc1db139d2bed9e1b3fea3e0a3236ae06` — first-use UX FAIL

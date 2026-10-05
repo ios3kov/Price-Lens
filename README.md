@@ -12,16 +12,17 @@ Scan one price label, review what Price Lens recognized, tap Add, then scan the 
 
 The initial native iOS MVP is implemented on `feat/initial-mvp`.
 
-Current AS 4.1 multi-item validation candidate: `d33616b9`
+Current AS 4.1 OCR-fix validation candidate: `7a25dbce`
 
 - iOS Simulator build: PASS
 - Unsigned iPhone device-target build: PASS
-- Core tests: 70 / 70 PASS
+- Core tests: 73 / 73 PASS
 - Device bundle identity + privacy manifest CI check: PASS
 - Physical candidates `8450963d` and `a2d9d9e0`: launched, workflow UX FAIL
-- Multi-item physical retest: NOT RUN
+- Previous multi-item candidate `d33616b9`: physical Russian ₽ OCR FAIL
+- RUB/language-hint physical retest: NOT RUN
 - Public release: not authorized / not performed
 
-Controlled multi-item camera fixtures are in `validation/multi-item-fixtures.html`.
+Controlled fixtures are in `validation/multi-item-fixtures.html` and `validation/russian-ruble-fixture.html`.
 
 See `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_DESIGN.md`, `docs/PRIVACY.md`, `docs/ACCESSIBILITY.md`, `docs/DEVICE_QA.md`, `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md`, `docs/BUILD_IDENTITY_MULTI_ITEM.md` and `docs/EVIDENCE_MULTI_ITEM_VALIDATION_PREP.md`.

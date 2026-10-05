@@ -2,13 +2,13 @@
 
 ## Exact candidate
 
-- Source commit to build: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf`
+- Source commit to build: `7a25dbceb00926a868c5686934c3059e0269e932`
 - Bundle ID: `com.os3kov.PriceLens`
 - Version/build: `0.1.0 (1)`
 - Channel: local Xcode signed install
 - Standard: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 
-This candidate replaces the physically tested fixed-two-item candidates because the user rejected that workflow and requested comparison beyond two products. Do not build from a different production-source commit and call it the same candidate.
+This candidate keeps the sequential multi-item workflow and replaces `d33616b9` because the physical Russian shelf-label test failed to recognize `229 + 99₽ / 200Г`. Do not build from a different production-source commit and call it the same candidate.
 
 ## Local preparation
 
@@ -16,7 +16,7 @@ From the existing local repository or a clean clone:
 
 ```bash
 git fetch origin
-git checkout d33616b9ae39ecae6ffc3054e8ade20afe7745cf
+git checkout 7a25dbceb00926a868c5686934c3059e0269e932
 git status --short
 git rev-parse HEAD
 xcodebuild -version
@@ -41,7 +41,15 @@ Changing Team for local signing is an environment/signing input; do not commit a
 
 ## Test data
 
-Start with the sequential controlled fixture:
+First retest the Russian RUB failure:
+
+`validation/russian-ruble-fixture.html`
+
+Expected: `Label ready` with 229.99 ₽, 200 g and a unit price near 1149.95 ₽/kg.
+
+If the app instead shows `Text found`, capture that screen: VisionKit is reading text but the parser still needs the exact OCR transcript. If it stays at `Scan a price label`, the remaining issue is OCR/language recognition rather than parsing.
+
+Then continue with the sequential controlled fixture:
 
 `validation/multi-item-fixtures.html`
 

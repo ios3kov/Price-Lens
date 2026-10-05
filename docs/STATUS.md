@@ -13,7 +13,7 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 - Historical physical candidate: `8450963dc1db139d2bed9e1b3fea3e0a3236ae06` — UX FAIL
 - Last physically launched candidate: `a2d9d9e0f6c2536335f19deecd7b12b9d4c98013` — workflow UX FAIL
 - Last physically launched multi-item candidate: `d33616b9ae39ecae6ffc3054e8ade20afe7745cf` — OCR/parser FAIL on Russian shelf label
-- Next OCR-fix validation candidate: pending commit + fresh CI
+- Current OCR-fix validation candidate: `7a25dbceb00926a868c5686934c3059e0269e932`
 - Standard baseline: AS Development Rules 4.1.0 @ `6a19ab6d44b34376edccda3515f1355d0ead2041`
 - Previous baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45` (historical only)
 - Delivery gate: Validation
@@ -45,19 +45,20 @@ camera -> scan one price label -> review recognized values -> Add -> repeat for 
 
 ## Internal verification
 
-For current multi-item candidate `d33616b9`:
+For current OCR-fix candidate `7a25dbce`:
 
-- GitHub Actions run: `37325029008`
+- GitHub Actions run: `37355428673`
 - Xcode 16.4
 - Swift 6.1.2
 - iOS Simulator build: PASS
 - unsigned iPhone device-target build: PASS
 - built bundle identity: PASS — `com.os3kov.PriceLens 0.1.0 (1)`
 - bundled privacy manifest / Required Reason API `35F9.1`: PASS
-- core regression suite: PASS — 70 executed, 0 failures
-- new ComparisonSession coverage: 3+ ranking, duplicate rejection, mixed-dimension rejection, different-currency rejection, remove/clear
-- separate diff/spec review: PASS; no new blocking finding
-- physical multi-item workflow retest: NOT_RUN
+- core regression suite: PASS — 73 executed, 0 failures
+- Russian RUB regression: PASS — current `229 + 99₽`, old `269 + 99`, `200Г`
+- `₽` and `RUB` currency equivalence: PASS
+- dynamic preferred/Russian/English DataScanner language hints compile on iOS target: PASS
+- physical same-label retest: NOT_RUN
 
 Historical Evidence for earlier candidates remains unchanged.
 
@@ -97,7 +98,7 @@ The next candidate adds RUB parsing, dynamic preferred/ru/en language hints and 
 
 The sequential multi-item workflow is **not yet validated on a physical iPhone** after the Russian shelf-label OCR fix.
 
-Next required step: use `docs/LOCAL_IPHONE_VALIDATION_PACKAGE.md` to build and install exact candidate `d33616b9`, then run the M01–M15 scenarios in `docs/DEVICE_QA.md` using `validation/multi-item-fixtures.html` before real shelf labels.
+Next required step: build and install exact candidate `7a25dbce`, first retest the same Russian shelf label / `validation/russian-ruble-fixture.html`, then continue M01–M15 multi-item scenarios.
 
 Blocking runtime failures include any false winner, wrong unit normalization, cross-tag pairing, A/B mismatch, stale result, inaccessible critical recovery/result state, unexpected data flow, or unrecoverable camera state.
 
@@ -108,7 +109,7 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Requirement / obligation | Implementation block | Observable acceptance | Check / phase | Current status / Evidence |
 | --- | --- | --- | --- | --- |
 | Camera-only primary workflow; no manual entry | VisionKit scanner + SwiftUI camera UI | User can compare without typing | pre-handoff: source/build review; user-validation: live camera | Implementation PASS; runtime NOT RUN |
-| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION PASS; 70-test CI PASS; device NOT_RUN |
+| Multi-item comparison session | single-label capture + ComparisonSession | user can add 2, 3, 4+ compatible products; best unit price updates across the full set | pre-handoff: core tests + physical validation | IMPLEMENTATION PASS; 73-test CI PASS; device NOT_RUN |
 | Price + quantity stay associated with the same tag | geometry clustering + recursive split guards | no cross-tag price/quantity pairing | pre-handoff tests + user-validation fixtures | Automated PASS; live camera NOT RUN |
 | Unit normalization is correct | Decimal parser / ComparisonEngine | g↔kg, ml/cl↔L, count and multipacks yield correct unit price | pre-handoff: unit tests | PASS |
 | Ambiguous/unit-price text does not create a false winner | parser rejection rules | `/kg`, `per 100 g/ml`, unsupported ambiguity do not become package price | pre-handoff: regression tests | PASS |
@@ -116,22 +117,22 @@ This is the current scoped reconciliation for the first iPhone validation milest
 | Candidate preview corresponds to centered label | DataScanner bounds + one-label ROI | preview outline/value belongs to the label the user is about to add | user-validation: physical iPhone | NOT RUN |
 | Live OCR is useful on real shelf labels | DataScanner `.accurate` + one-label ROI + stabilization | stable preview is correct before Add; previously added items remain intact | user-validation: physical iPhone | NOT RUN |
 | Performance target | stabilization / on-device processing | useful result <= 1.5 s after stable readable framing | user-validation: physical iPhone timing | NOT RUN |
-| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on d33616b9 |
+| Privacy Required Reason API | bundled PrivacyInfo + CI bundle inspection | exact System Boot Time reason 35F9.1 exists in built app | pre-handoff | PASS on 7a25dbce |
 | Basic accessibility | SwiftUI semantics + Reduce Motion + result accessibility value | critical result/recovery state is understandable without color-only cues | pre-handoff compile/review + user-validation device checks | Implementation PASS; device checks NOT_RUN |
 | Artifact identity for validation | exact Git commit + bundle ID/version/build + local signed Xcode install | installed test build is traceable to exact candidate | pre-handoff/user-validation boundary | unsigned identity PASS; signed installed identity NOT_RUN |
 | Merge / public release | explicit user authorization required | no merge/publication without command | permission boundary | NOT AUTHORIZED / NOT PERFORMED |
 
 ### Reconciliation result
 
-- Product contract has been updated for the user-requested multi-item workflow.
-- Reference Audit remains N/A; no concrete external product is a parity target.
+- Product contract remains the sequential multi-item workflow.
 - AS Development Rules 4.1.0 remains adopted.
-- Targeted Apple/VisionKit camera research for sequential capture is recorded in `docs/RESEARCH.md`.
-- Current candidate `d33616b9` has fresh simulator/device-target/identity/privacy and 70-test PASS evidence.
-- Previous physical candidates remain historical FAIL evidence and are not reused as validation of the changed workflow.
-- Physical M01–M15 multi-item scenarios remain NOT_RUN.
+- Russian shelf-label OCR failure from `d33616b9` is preserved as historical USER-REPORTED FAIL evidence.
+- Current candidate `7a25dbce` has fresh simulator/device-target/identity/privacy and 73-test PASS evidence.
+- The exact synthetic reproduction of the failed Russian label now passes, including RUB/₽ and old-price competition.
+- DataScanner now prioritizes the user's supported preferred languages plus supported Russian/English hints.
+- Physical same-label retest and M01–M15 remain NOT_RUN.
 - App Store Release scope remains separate and unauthorized.
-- Current claim: **d33616b9 passed internal checks but failed physical Russian shelf-label OCR; the bounded RUB/language-hint fix requires fresh CI and a same-label physical retest.**
+- Current claim: **bounded Russian OCR fix is internally verified; same-label physical retest is the next gate.**
 
 ## Release-only open scope
 
