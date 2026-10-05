@@ -7,6 +7,26 @@ import XCTest
 #endif
 
 final class PriceTagParserTests: XCTestCase {
+    func testRecognitionStabilizerRequiresContinuousTime() {
+        var stabilizer = RecognitionStabilizer(requiredDuration: 0.35)
+
+        XCTAssertFalse(stabilizer.observe(signature: "A|B", at: 10.00))
+        XCTAssertFalse(stabilizer.observe(signature: "A|B", at: 10.20))
+        XCTAssertTrue(stabilizer.observe(signature: "A|B", at: 10.36))
+    }
+
+    func testRecognitionStabilizerResetsWhenResultChanges() {
+        var stabilizer = RecognitionStabilizer(requiredDuration: 0.35)
+
+        XCTAssertFalse(stabilizer.observe(signature: "A|B", at: 10.00))
+        XCTAssertFalse(stabilizer.observe(signature: "A|C", at: 10.30))
+        XCTAssertFalse(stabilizer.observe(signature: "A|C", at: 10.50))
+        XCTAssertTrue(stabilizer.observe(signature: "A|C", at: 10.66))
+
+        stabilizer.reset()
+        XCTAssertFalse(stabilizer.observe(signature: "A|C", at: 20.00))
+    }
+
     func testScanRegionLeavesSpaceForTopAndBottomUI() throws {
         let bounds = CGRect(x: 0, y: 0, width: 390, height: 844)
         let region = try XCTUnwrap(ScanRegionLayout.rect(in: bounds))

@@ -9,8 +9,7 @@ final class ScannerModel: ObservableObject {
     @Published private(set) var scanState: ScanState = .searching
     @Published private(set) var visibleCandidates: [ProductCandidate] = []
 
-    private var pendingSignature: String?
-    private var stableUpdateCount = 0
+    private var stabilizer = RecognitionStabilizer()
     private var missingUpdateCount = 0
 
     func prepareCamera() async {
@@ -59,8 +58,7 @@ final class ScannerModel: ObservableObject {
 
         if candidates.count > 2 {
             visibleCandidates = []
-            pendingSignature = nil
-            stableUpdateCount = 0
+            stabilizer.reset()
             missingUpdateCount = 0
             scanState = .tooManyTags
             return
@@ -81,8 +79,7 @@ final class ScannerModel: ObservableObject {
             } else if missingUpdateCount >= 3 {
                 visibleCandidates = []
                 scanState = .searching
-                pendingSignature = nil
-                stableUpdateCount = 0
+                stabilizer.reset()
             }
             return
         }
@@ -106,25 +103,17 @@ final class ScannerModel: ObservableObject {
 
         switch ComparisonEngine.compare(left: left, right: right) {
         case .failure(let failure):
-            pendingSignature = nil
-            stableUpdateCount = 0
+            stabilizer.reset()
             scanState = .incompatible(failure.message)
 
         case .success(let comparison):
             let signature = left.semanticSignature + "|" + right.semanticSignature
+            let isStable = stabilizer.observe(
+                signature: signature,
+                at: ProcessInfo.processInfo.systemUptime
+            )
 
-            if signature == pendingSignature {
-                stableUpdateCount += 1
-            } else {
-                pendingSignature = signature
-                stableUpdateCount = 1
-            }
-
-            if stableUpdateCount >= 3 {
-                scanState = .result(comparison)
-            } else {
-                scanState = .comparing
-            }
+            scanState = isStable ? .result(comparison) : .comparing
         }
     }
 

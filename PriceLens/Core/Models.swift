@@ -93,6 +93,41 @@ enum CandidateOrdering {
     }
 }
 
+
+struct RecognitionStabilizer {
+    let requiredDuration: TimeInterval
+
+    private(set) var signature: String?
+    private(set) var firstSeenAt: TimeInterval?
+
+    init(requiredDuration: TimeInterval = 0.35) {
+        self.requiredDuration = requiredDuration
+    }
+
+    mutating func observe(
+        signature newSignature: String,
+        at timestamp: TimeInterval
+    ) -> Bool {
+        if signature != newSignature {
+            signature = newSignature
+            firstSeenAt = timestamp
+            return false
+        }
+
+        guard let firstSeenAt else {
+            self.firstSeenAt = timestamp
+            return false
+        }
+
+        return timestamp - firstSeenAt >= requiredDuration
+    }
+
+    mutating func reset() {
+        signature = nil
+        firstSeenAt = nil
+    }
+}
+
 enum ComparisonFailure: Equatable {
     case incompatibleDimensions
     case differentCurrencies

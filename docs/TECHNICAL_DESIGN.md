@@ -79,10 +79,11 @@ Live OCR changes constantly. Publishing every frame would make the UI unusable.
 Initial strategy:
 
 - Build a semantic signature from normalized price + quantity + dimension for each candidate.
-- Require the same pair to remain present for multiple updates / a short time window.
+- Require the same pair to remain continuously present for at least 350 ms before publishing a result.
+- A changed signature restarts the stabilization timer.
 - Clear the result only after a grace period rather than immediately when one OCR item disappears for a frame.
 
-Exact timing is a tunable implementation parameter and must be validated on-device.
+The 350 ms value is an initial validation parameter and must be tuned on-device if it feels either jumpy or sluggish.
 
 ## Parser strategy
 
