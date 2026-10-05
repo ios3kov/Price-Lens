@@ -26,7 +26,7 @@ The current regression suite covers:
 - comparison-zone geometry;
 - time-based recognition stabilization.
 
-For verified source commit `61653ae9`, CI executed 33 tests with 0 failures.
+For verified source commit `e241b070`, CI executed 50 tests with 0 failures.
 
 ## Required runtime checks on physical iPhone
 

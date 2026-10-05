@@ -10,7 +10,7 @@ camera -> on-device OCR -> exactly two price-tag candidates -> unit normalizatio
 
 - Repository: ios3kov/Price-Lens
 - Working branch: feat/initial-mvp
-- Verified source commit: `61653ae94b15c4c2e29c3e24207f1097ffe10746`
+- Verified source commit: `e241b07059a9c494b3c83026274993d935c5c4ff`
 - Standard baseline: AE Development Rules 8.0.0 @ `132b7cd32873ba7328e3128ffbb33e1929b74d45`
 - Delivery gate: Development
 - Risk profile: Standard
@@ -36,13 +36,14 @@ camera -> on-device OCR -> exactly two price-tag candidates -> unit normalizatio
 
 ## Internal verification
 
-For source commit `61653ae9`:
+For source commit `e241b070`:
 
-- GitHub Actions run: `37307272302`
+- GitHub Actions run: `37310658218`
 - Xcode 16.4 (16F6)
 - Swift 6.1.2
 - iOS simulator build: PASS
-- Core unit tests: PASS — 33 executed, 0 failures
+- Unsigned iPhone device-target build: PASS
+- Core unit tests: PASS — 50 executed, 0 failures
 - Project TODO/FIXME/fatalError/debug-print audit: no findings
 - Relevant source warnings: none
 
